@@ -5,7 +5,7 @@ def euclidean_distance(u,v):
     return np.linalg.norm(u - v)
 
 def l1_distance(u,v):
-    return np.sum(np.absolute(u - v))
+    return np.linalg.norm((u - v),ord=1)
 
 def chi2_distance(u,v):
     return np.sum(np.divide(np.power(u-v,2),(u+v)))
