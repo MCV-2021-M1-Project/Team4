@@ -11,7 +11,7 @@ def chi2_distance(u,v):
     return np.sum(np.divide(np.power(u-v,2),(u+v)))
 
 def histogram_intersection(u,v):
-    retusrn np.sum(np.minimum(u,v))
+    return np.sum(np.minimum(u,v))
 
 def hellinger_kernel(u,v):
 	return np.sum(np.sqrt(u,v))
