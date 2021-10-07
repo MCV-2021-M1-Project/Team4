@@ -5,6 +5,7 @@ import pickle
 
 
 from mapk import mapk
+from utils import euclidean_distance, histogram_intersection, hellinger_kernel
 
 n = 287 #Number of museum images
 t = 30 #Number of queries
@@ -45,15 +46,15 @@ for j in range(t):
         db_hist = db_hist/db_hsv_img[:,:,0].size
 
         #Euclidean distances
-        dist = np.linalg.norm(hist - db_hist)
+        dist = euclidean_distance(hist,db_hist)
         distances = np.append(distances,dist)
 
         #Histogram intersection
-        inter = np.sum(np.minimum(hist,db_hist))
+        inter = histogram_intersection(hist,db_hist)
         intersections = np.append(intersections,inter)
 
         #Hellinger kernel
-        kernel = np.sum(np.sqrt(hist,db_hist))
+        kernel = hellinger_kernel(hist,db_hist)
         kernels = np.append(kernels,kernel)
 
 
