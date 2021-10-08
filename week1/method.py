@@ -19,11 +19,7 @@ def main(color_space, similarity_measure):
     db_set_path = db_path + '/BBDD/'
     exp_distances = []
 
-    count = 0
     for file_query in os.listdir(query_set_path):
-        if count > 2:
-            break
-        count +=1
         if file_query.endswith(".jpg"):
             # Read query
             img = cv2.imread(query_set_path + file_query)
