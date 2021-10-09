@@ -32,7 +32,7 @@ def inliers_bounds(u):
     return upper_bound,bottom_bound
 
 
-def borders(u,max_initial):
+def borders(u):
     upper_bound,bottom_bound = inliers_bounds(u)    
     
     aux = u
