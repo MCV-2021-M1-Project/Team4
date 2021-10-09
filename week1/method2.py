@@ -2,25 +2,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 
-from numpy.core.fromnumeric import mean
-
-
-from mapk import mapk
-from utils import euclidean_distance, l1_distance, chi2_distance, histogram_intersection, hellinger_kernel, borders
+from utils import borders
 
 
 # Read image file
-img_file = '../../data/qsd2_w1/00001.jpg'
+img_file = '../../data/qsd2_w1/00000.jpg'
 img = cv2.imread(img_file)
 
 # RGB to HSV
-transformed_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-channel1 = transformed_img[:,:,1]
-channel2 = transformed_img[:,:,2]
+hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+s = hsv_img[:,:,1]
+v = hsv_img[:,:,2]
 
 ## Saturation and Value threshold
 thresholded = np.zeros((img.shape[0],img.shape[1]))
-thresholded[(channel1[:,:] > 105) | (channel2[:,:] < 40)] = 1
+thresholded[(s[:,:] > 105) | (v[:,:] < 40)] = 1
 
 plt.imshow(thresholded,cmap='gray')
 plt.show()
