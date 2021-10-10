@@ -11,12 +11,12 @@ def bounds(u):
     edges = np.argwhere(i != 0) # Just inliers indexes
     
     left_i = edges.min()
-    left_j = u[edges.min()]
+    left_j = u[left_i]
     
     right_i = edges.max()
-    right_j = u[edges.max()]
+    right_j = u[right_i]
     
-    coordinates = [left_i,left_j,right_i,right_j]
+    coordinates = [left_j,left_i,right_j,right_i]
     
     return coordinates
 
@@ -35,7 +35,7 @@ for th_s in range(100,160):
         hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         s = hsv_img[:,:,1]
         v = hsv_img[:,:,2]
-
+        
         ## Saturation and Value thresholding
         thresholded = np.zeros((img.shape[0],img.shape[1]))
         thresholded[(s[:,:] > th_s) | (v[:,:] < th_v)] = 1
