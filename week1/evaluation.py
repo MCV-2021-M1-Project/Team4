@@ -34,5 +34,5 @@ def recall(tp,fn):
     return np.sum(tp)/(np.sum(tp) + np.sum(fn))
     
 def f1_measure(p,r):
-    return 2*p*r/(p + r)
+    return np.nan_to_num(2*p*r/(p + r))
     

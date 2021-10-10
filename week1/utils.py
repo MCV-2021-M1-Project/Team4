@@ -31,15 +31,14 @@ def inliers_bounds(u):
     return upper_bound,bottom_bound
 
 
-def borders(u):
+def inliers(u):
     
+    # Detected border's must be close to each other
     upper_bound,bottom_bound = inliers_bounds(np.extract(u!=0,u))    
     
     #Inliers
-    aux = u
-    aux[u > upper_bound] = 0
-    aux[u < bottom_bound] = 0
+    inliers = u
+    inliers[u > upper_bound] = 0
+    inliers[u < bottom_bound] = 0
     
-    edges = np.argwhere(aux != 0)
-    
-    return aux[edges.min()],edges.min(),aux[edges.max()],edges.max()
+    return inliers
