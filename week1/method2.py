@@ -46,12 +46,12 @@ for th_s in range(100,160):
 
         # Find picture's edges coordinates
         ul_row,ul_col,ur_row,ur_col = bounds(upper_border)
-        br_row_trans,br_col_trans,bl_row_trans,bl_col_trans  = bounds(bottom_border) # Transposed coordinates
+        br_row_flip,br_col_flip,bl_row_flip,bl_col_flip  = bounds(bottom_border) # flipped coordinates
         
-        br_row = img.shape[0] - br_row_trans
-        br_col = img.shape[1] - br_col_trans
-        bl_row = img.shape[0] - bl_row_trans
-        bl_col = img.shape[1] - bl_col_trans
+        br_row = img.shape[0] - br_row_flip
+        br_col = img.shape[1] - br_col_flip
+        bl_row = img.shape[0] - bl_row_flip
+        bl_col = img.shape[1] - bl_col_flip
 
         pointUL = [ul_col,ul_row] # Upper left point
         pointUR = [ur_col,ur_row] # Upper right point
