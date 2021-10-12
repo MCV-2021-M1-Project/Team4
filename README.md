@@ -27,7 +27,9 @@ arguments:
 Argument options:
  -m:    d - If the query set is for development and the correspondences with the database are known. The distance (-d) is computed.
         t - If the query set is for test. The program saves a pickle file with a list of list with the K best image numbers in the current directory.
+        
  -k:    int - number of images to retrieve or compute the mAP@k
+ 
  -c:    GRAY   - Gray level histograms
         RGB    - RGB histograms
         H      - Hue histogram
@@ -39,13 +41,16 @@ Argument options:
         YCrCb  - YCrCb histograms
         CrCb   - CrCb histograms
         CIELab - CIELab histograms
+        
  -d:    euclidean - euclidean distance
         intersec  - intersectoin of the histograms
         l1        - l1/Manhattan distance
         chi2      - Chi-squared distance
         hellinger - Hellinger distance
         all       - Compute all the distances (only in development mode)
+        
  -p:    Path
+ 
  -q:    Path
 ```
 Example:
