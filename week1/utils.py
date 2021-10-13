@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 
 # -- SIMILARITY MEASURES --
+
 def euclidean_distance(u,v):
     return np.linalg.norm(u - v)
 
@@ -16,7 +17,6 @@ def l1_distance(u,v):
 def chi2_distance(u,v, eps=1e-10):
     return 0.5 * np.sum([((a - b) ** 2) / (a + b + eps) for (a, b) in zip(u, v)])
     #return np.sum(np.nan_to_num(np.divide(np.power(u-v,2),(u+v))))
-
 
 def histogram_intersection(u,v):
     return np.sum(np.minimum(u,v))
@@ -106,4 +106,3 @@ def computeSimilarity(hist1, hist2, similarity_measure):
         return utils.hellinger_kernel(hist1, hist2)
     elif similarity_measure == 'all':
         return utils.euclidean_distance(hist1, hist2), utils.histogram_intersection(hist1, hist2), utils.l1_distance(hist1, hist2), utils.chi2_distance(hist1, hist2), utils.hellinger_kernel(hist1, hist2)
-
