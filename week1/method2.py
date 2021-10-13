@@ -71,13 +71,13 @@ for i in range(t):
 
     # Find picture's edges coordinates
     if (upper_border > -1).any():
-        ul_row,ul_col,ur_row,ur_col = bounds(upper_border)
-        bl_row,bl_col,br_row,br_col = bounds(bottom_border)
+        ul_j,ul_i,ur_j,ur_i = bounds(upper_border)
+        bl_j,bl_i,br_j,br_i = bounds(bottom_border)
 
-        pointUL = [ul_col,ul_row] # Upper left point
-        pointUR = [ur_col,ur_row] # Upper right point
-        pointBL = [bl_col,bl_row] # Bottom left point
-        pointBR = [br_col,br_row] # Bottom right point
+        pointUL = [ul_i,ul_j] # Upper left point
+        pointUR = [ur_i,ur_j] # Upper right point
+        pointBL = [bl_i,bl_j] # Bottom left point
+        pointBR = [br_i,br_j] # Bottom right point
 
         ## Draw picture's contours
         """ img_contours = cv2.line(cv2.cvtColor(img, cv2.COLOR_BGR2RGB),pointUL,pointUR, color=255,thickness =5)
