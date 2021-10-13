@@ -13,6 +13,7 @@ from utils import computeHistImage, computeSimilarity, checkArguments
 
 def parse_args():
     parser = argparse.ArgumentParser(description='CBIR with different descriptors and distances')
+    
     parser.add_argument('-m', type=str, default='d',
                         help='Define if the query set is for development (d) or test(t).')
     parser.add_argument('-k', type=int, default=10,
