@@ -47,6 +47,23 @@ def main():
     # Obtain the number of query images
     t = len(glob.glob1(args.q, "*.jpg"))
 
+    # Compute the histograms of all the images (BBDD + query set)
+    BBDD_hist = []
+    query_hist = []
+
+    # Hist of the query images
+    for j in range(t):
+        img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
+        img = cv2.imread(img_file)
+        query_hist.append(computeHistImage(img, color_space=args.c))
+
+    # Hist of the database images
+    for j in range(n):
+        db_file = args.p.as_posix() + '/bbdd_00' + ('00' if j < 10 else ('0' if j < 100 else '')) + str(j) + '.jpg'
+        db_img = cv2.imread(db_file)
+
+        BBDD_hist.append(computeHistImage(db_img, color_space=args.c))
+
     # List of lists
     exp_euclidean = []
     exp_intersection = []
@@ -56,12 +73,8 @@ def main():
 
     for j in tqdm(range(t)):
 
-        # Read the query image
-        img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
-        img = cv2.imread(img_file)
-
-        # Obtain the hist of the query image depending on the color space
-        hist = computeHistImage(img, color_space=args.c)
+        # Obtain the histogram of the query image j
+        hist = query_hist[j]
 
         eucl_distances = np.array([])
         instersection_distances = np.array([])
@@ -71,12 +84,8 @@ def main():
 
         for i in range(n):
 
-            # Read the database image
-            db_file = args.p.as_posix() + '/bbdd_00' + ('00' if i < 10 else ('0' if i < 100 else '')) + str(i) + '.jpg'
-            db_img = cv2.imread(db_file)
-
-            # Obtain the hist of the database image depending on the color space
-            db_hist = computeHistImage(db_img, color_space=args.c)
+            # Obtain the histogram of the database image i
+            db_hist = BBDD_hist[i]
 
             # Compute the distances
             if args.d == "all":
