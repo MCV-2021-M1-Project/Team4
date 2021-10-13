@@ -11,11 +11,13 @@ def evaluation(predicted,truth):
     fp[(predicted[:,:] == 1) & (truth[:,:] == 0)] = 1
     fn[(predicted[:,:] == 0) & (truth[:,:] == 1)] = 1
     
-    """ plt.subplot(131)
+    """ plt.subplot(221)
+    plt.imshow(predicted,cmap='gray')
+    plt.subplot(222)
     plt.imshow(tp,cmap='gray')
-    plt.subplot(132)
+    plt.subplot(223)
     plt.imshow(fp,cmap='gray')
-    plt.subplot(133)
+    plt.subplot(224)
     plt.imshow(fn,cmap='gray')
     plt.show() """
     
@@ -27,11 +29,11 @@ def evaluation(predicted,truth):
     
     
 def precision(tp,fp):
-    return np.sum(tp)/(np.sum(tp) + np.sum(fp))
+    return np.nan_to_num(np.sum(tp)/(np.sum(tp) + np.sum(fp)))
     
     
 def recall(tp,fn):
-    return np.sum(tp)/(np.sum(tp) + np.sum(fn))
+    return np.nan_to_num(np.sum(tp)/(np.sum(tp) + np.sum(fn)))
     
 def f1_measure(p,r):
     return np.nan_to_num(2*p*r/(p + r))

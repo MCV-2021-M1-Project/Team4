@@ -34,11 +34,11 @@ def inliers_bounds(u):
 def inliers(u):
     
     # Detected border's must be close to each other
-    upper_bound,bottom_bound = inliers_bounds(np.extract(u!=0,u))    
+    upper_bound,bottom_bound = inliers_bounds(np.extract(u!=-1,u))    
     
     #Inliers
     inliers = u
-    inliers[u > upper_bound] = 0
-    inliers[u < bottom_bound] = 0
+    inliers[u > upper_bound] = -1
+    inliers[u < bottom_bound] = -1
     
     return inliers
