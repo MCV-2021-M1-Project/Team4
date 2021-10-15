@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2
+from PIL import Image
+
 
 from utils import inliers
 from evaluation import evaluation
@@ -63,6 +65,9 @@ for i in range(t):
     ## Saturation and Value thresholding
     thresholded = np.zeros((img.shape[0],img.shape[1]))
     thresholded[(s > th_s) | (v < th_v)] = 1
+    
+    """ plt.imshow(thresholded, cmap='gray')
+    plt.show() """
         
 
     # Find Upper and Bottom borders
@@ -91,19 +96,21 @@ for i in range(t):
         mask = cv2.fillConvexPoly(np.zeros((img.shape[0],img.shape[1])),np.array([pointUL,pointUR,pointBR,pointBL]), color=1)
         """ plt.imshow(mask, cmap='gray')
         plt.show() """
+        
+        plt.imsave('../../data/qsd2_masks/00' + ('00' if i < 10 else '0') + str(i) + '.png',mask,cmap="gray")
     
-    else:
+    """ else:
         mask = np.zeros((img.shape[0],img.shape[1]))
 
-    ground_truth_file = '../../data/qsd2_w1/00' + ('00' if i < 10 else '0') + str(i) + '.png'
+    ground_truth_file = '../../data/qst2_w1/00' + ('00' if i < 10 else '0') + str(i) + '.png'
     ground_truth = cv2.imread(ground_truth_file)
     ground_truth[ground_truth == 255] = 1 # Range [0,255] to [0,1]
 
     #Evaluation
-    evaluations.append(evaluation(mask,ground_truth[:,:,0]))
+    evaluations.append(evaluation(mask,ground_truth[:,:,0])) """
     
-evaluation_mean = np.sum(evaluations,axis=0)/t
+""" evaluation_mean = np.sum(evaluations,axis=0)/t
 
 print("Precision: " +evaluation_mean[0])
 print("Recall: " + evaluation_mean[1])
-print("F1-measure: " + evaluation_mean[2])
+print("F1-measure: " + evaluation_mean[2]) """

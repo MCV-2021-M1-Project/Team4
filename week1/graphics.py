@@ -14,10 +14,13 @@ def all_measures(r,r2,p,p2):
     index = np.argwhere(p_sorted == 0)
 
     r_sorted = all_r.flatten()[np.argsort(all_p.flatten())]
+    indexes = np.argwhere(p_sorted < 0.9)
+    p_sorted = np.delete(p_sorted,indexes)
+    r_sorted = np.delete(r_sorted,indexes)
     
     
-    p_sorted = np.delete(p_sorted,index)
-    r_sorted = np.delete(r_sorted,index)
+    """ p_sorted = np.delete(p_sorted,index)
+    r_sorted = np.delete(r_sorted,index) """
     
     return p_sorted, r_sorted
     
@@ -110,8 +113,25 @@ with open("recall_gray.npy","rb") as f:
 with open("f1_measures_gray.npy","rb") as f:
     f1_measures_gray = np.load(f)
     
+""" print(np.sort(f1_measures2)) """
+
+""" print("\nValue: 61, Saturation: 114")
+print(f1_measures2[33,14])
+print(precisions2[33,14])
+print(recalls2[33,14])
+
+print("\nValue: 62, Saturation: 114")
+print(f1_measures2[32,14])
+print(precisions2[32,14])
+print(recalls2[33,14])
+
+print("\nValue: 61, Saturation: 114")
+print(f1_measures2[31,14])
+print(precisions2[31,14])
+print(recalls2[31,14]) """
     
-fig = plt.figure()
+    
+""" fig = plt.figure()
 ax1 = fig.add_subplot(1,3,1)
 img1 = plt.imshow(np.flip(precisions,axis=0),extent=[0,250,0,250])
 cbar1 = plt.colorbar(img1,ticks=[0.5,0.6, 0.7, 0.8, 0.9], orientation='horizontal')
@@ -133,11 +153,11 @@ cbar3 = fig.colorbar(img3,ticks=[0.5,0.6, 0.7, 0.8, 0.9], orientation='horizonta
 cbar3.ax.set_xticklabels(['50%','60%', '70%', '80%','90%'])
 ax3.set_ylabel("Value")
 ax3.set_xlabel("Saturation")
-ax3.set_title("F1 Measure")
+ax3.set_title("F1 Measure") """
 
 
 plt.figure()
-""" for i in range(9,14): """
+
 
 
 #PR curves
@@ -145,10 +165,10 @@ p_sorted, r_sorted = all_measures(recalls,recalls2,precisions,precisions2)
 plt.plot(p_sorted, r_sorted, label = 'Saturation + Value')
 
 ps_sorted, rs_sorted = all_measures(recalls_S,recalls_S2,precisions_S,precisions_S2)
-plt.plot(ps_sorted,rs_sorted, label = "Saturation")
+plt.plot(ps_sorted,rs_sorted, label = "Saturation",linewidth=2)
 
-pv_sorted,rv_sorted = all_measures(recalls_V,np.array([]),precisions_V,np.array([]))
-plt.plot(pv_sorted,rv_sorted, label = "Value")
+""" pv_sorted,rv_sorted = all_measures(recalls_V,np.array([]),precisions_V,np.array([]))
+plt.plot(pv_sorted,rv_sorted, label = "Value") """
 
 py_sorted, ry_sorted = all_measures(recalls_y,recalls_y2,precisions_y,precisions_y2)
 plt.plot(py_sorted,ry_sorted, label = "Y - YCrCb")
@@ -157,7 +177,7 @@ pl_sorted, rl_sorted = all_measures(recalls_L,np.array([]),precisions_L,np.array
 plt.plot(py_sorted,ry_sorted, label = "L - CieLab")
 
 pgray_sorted, rgray_sorted = all_measures(recalls_gray,np.array([]),precisions_gray,np.array([]))
-plt.plot(py_sorted,ry_sorted, label = "Grayscale")
+plt.plot(py_sorted,ry_sorted, label = "Grayscale",linewidth=2)
 
 plt.ylabel("Recall")
 plt.xlabel("Precision")
@@ -170,7 +190,7 @@ all_precisions = []
 for f1 in range(70,100,7):
     recall_f1 = []
     precision_f1 = []
-    for p in range(600,1000,10):
+    for p in range(900,1000,10):
         if p/500>f1/100:
             r = recall(p/1000,f1/100)
             if r <= 1 and r >= 0:
