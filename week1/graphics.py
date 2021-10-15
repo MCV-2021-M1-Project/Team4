@@ -110,6 +110,7 @@ with open("recall_gray.npy","rb") as f:
 with open("f1_measures_gray.npy","rb") as f:
     f1_measures_gray = np.load(f)
     
+    
 fig = plt.figure()
 ax1 = fig.add_subplot(1,3,1)
 img1 = plt.imshow(np.flip(precisions,axis=0),extent=[0,250,0,250])
@@ -139,7 +140,7 @@ plt.figure()
 """ for i in range(9,14): """
 
 
-
+#PR curves
 p_sorted, r_sorted = all_measures(recalls,recalls2,precisions,precisions2)
 plt.plot(p_sorted, r_sorted, label = 'Saturation + Value')
 
@@ -165,6 +166,7 @@ plt.xlabel("Precision")
 all_recalls = []
 all_precisions = []
 
+#Draw F1-measures lines
 for f1 in range(70,100,7):
     recall_f1 = []
     precision_f1 = []
