@@ -9,13 +9,14 @@ M1 - Introduction to Human and Computer Vision
 To execute the program:
 
 ```
-$ python3 run.py [-m mode] [-k k] [-c color_space] [-d distance] [-p path_of_the_BBDD] [-q path_of_the_query_set]
+$ python3 run.py [-b background][-m mode] [-k k] [-c color_space] [-d distance] [-p path_of_the_BBDD] [-q path_of_the_query_set]
 ```
 ```
 CBIR with different descriptors and distances
 arguments:
 
  -h, --help Show this help message and exit
+ -b B       Substract the background of the paintings (y) or not (n)
  -m M       Define if the query set is for developement(d) ot test(t)
  -k K       Number of images to retrieve
  -c C       Color space in which the histograms will be computed
@@ -25,6 +26,9 @@ arguments:
 ```
 ```
 Argument options:
+ -b:    y - If the images contain a part of the background and it has to be estimated and substracted. The masks of all the query images are stored in a folder called masks.
+        n - The images are cut to the frame of the painting
+        
  -m:    d - If the query set is for development and the correspondences with the database are known. The distance (-d) is computed.
         t - If the query set is for test. The program saves a pickle file with a list of list with the K best image numbers in the current directory.
         
@@ -42,9 +46,9 @@ Argument options:
         CrCb   - CrCb histograms
         CIELab - CIELab histograms
         
- -d:    euclidean - euclidean distance
-        intersec  - intersectoin of the histograms
-        l1        - l1/Manhattan distance
+ -d:    euclidean - Euclidean distance
+        intersec  - Intersectoin of the histograms
+        l1        - L1/Manhattan distance
         chi2      - Chi-squared distance
         hellinger - Hellinger distance
         all       - Compute all the distances (only in development mode)
@@ -53,8 +57,11 @@ Argument options:
  
  -q:    Path
 ```
-Example:
+Examples:
+
+The images have background, the program is in development mode, only 1 image is retrieved, the histograms are computed using the YCrCb color space and the K images will be computed using all the possible distances:
+
 ```
-python3 run.py -m d -k 1 -c YCrCb -d all -p /home/Team4/Desktop/M1/data/BBDD/ -q /home/Team4/Desktop/M1/data/qsd1_w1/
+python3 run.py -b y -m d -k 1 -c YCrCb -d all -p /home/Team4/Desktop/M1/data/BBDD/ -q /home/Team4/Desktop/M1/data/qsd1_w1/
 ```
 

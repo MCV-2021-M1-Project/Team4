@@ -8,13 +8,21 @@ import pathlib
 from tqdm import tqdm
 from pathlib import Path
 from mapk import mapk
+from background_substraction import substractBackground
 from utils import computeHistImage, computeSimilarity, checkArguments
 
 
 def parse_args():
+    """
+    Function to get the input arguments
+    Returns
+    parse_args()
+    """
     parser = argparse.ArgumentParser(description='CBIR with different descriptors and distances')
+    parser.add_argument('-b', type=str, required=True,
+                        help='Remove background from the images (y) or not (n)')
     parser.add_argument('-m', type=str, default='d',
-                        help='Define if the query set is for development (d) or test(t).')
+                        help='Define if the query set is for development (d) or test(t)')
     parser.add_argument('-k', type=int, default=10,
                         help='Number of images to retrieve')
     parser.add_argument('-c', type=str, required=True,
@@ -47,18 +55,31 @@ def main():
     # Obtain the number of query images
     t = len(glob.glob1(args.q, "*.jpg"))
 
-    # Compute the histograms of all the images (BBDD + query set)
+    # Histograms of all the images (BBDD + query set)
     BBDD_hist = []
     query_hist = []
 
     # Hist of the query images
-    for j in range(t):
-        img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
-        img = cv2.imread(img_file)
-        query_hist.append(computeHistImage(img, color_space=args.c))
+
+    # If the background does not have to be subtracted
+    if args.b == "n":
+        for j in range(t):
+            img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
+            img = cv2.imread(img_file)
+            # Append all the query images histograms
+            query_hist.append(computeHistImage(img, color_space=args.c))
+
+    # If the background has to be subtracted
+    elif args.b == "y":
+        query_without_background = substractBackground(t, args=args)
+        for j in range(t):
+            # Append all the query images histograms
+            query_hist.append(computeHistImage(query_without_background[j], color_space=args.c))
 
     # Hist of the database images
-    for j in range(n):
+    print()
+    print('Computing the histograms of all the images of the database...')
+    for j in tqdm(range(n)):
         db_file = args.p.as_posix() + '/bbdd_00' + ('00' if j < 10 else ('0' if j < 100 else '')) + str(j) + '.jpg'
         db_img = cv2.imread(db_file)
 
@@ -71,6 +92,8 @@ def main():
     exp_chi2 = []
     exp_hellinger = []
 
+    print()
+    print('Computing the distances between histograms...')
     for j in tqdm(range(t)):
 
         # Obtain the histogram of the query image j
