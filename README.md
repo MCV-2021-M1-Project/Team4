@@ -65,12 +65,25 @@ The images have background, the program is in development mode, only 1 image is 
 python3 run.py -b y -m d -k 1 -c YCrCb -d all -p /home/Team4/Desktop/M1/data/BBDD/ -q /home/Team4/Desktop/M1/data/qsd1_w1/
 
 Estimating and substracting the background for every query image...
-100%|███████████████████████████████████████████| 30/30 [00:45<00:00,  1.52s/it]
+100%|███████████████████████████████████████████| 30/30 [00:25<00:00,  1.16it/s]
+
+BACKGROUND SUBSTRACTION MEASURES:
+Precision: 0.9860
+Recall: 0.9754
+F1-measure: 0.9803
 
 Computing the histograms of all the images of the database...
-100%|█████████████████████████████████████████| 287/287 [00:12<00:00, 23.87it/s]
+100%|█████████████████████████████████████████| 287/287 [00:11<00:00, 24.01it/s]
 
 Computing the distances between histograms...
-100%|███████████████████████████████████████████| 30/30 [00:23<00:00,  1.26it/s]
+100%|███████████████████████████████████████████| 30/30 [00:57<00:00,  1.93s/it]
+
+mAP@k (K = 1) of the desired distances
+Euclidean Distance: 0.4333
+Histogram Intersection: 0.3667
+L1 Distance: 0.5667
+Chi-Squared Distance: 0.5333
+Hellinger Distance: 0.5000
+
 ```
 
