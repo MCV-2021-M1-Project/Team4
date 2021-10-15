@@ -58,11 +58,25 @@ Argument options:
  -q:    Path
 ```
 Examples:
-
-The images have background, the program is in development mode, only 1 image is retrieved, the histograms are computed using the YCrCb color space and the K images will be computed using all the possible distances:
+- The images do not have background, the program is in test mode (i.e. the ground truth is unknown), 10 images are retrieved, the histograms are computed using the HSV color space and the k images will be computed using the Chi-Squared distance. (In test mode only one distance can be used since a pickle file is stored in the current directory with a list of list of the k best results).
 
 ```
-python3 run.py -b y -m d -k 1 -c YCrCb -d all -p /home/Team4/Desktop/M1/data/BBDD/ -q /home/Team4/Desktop/M1/data/qsd1_w1/
+$ python3 run.py -b n -m t -k 10 -c HSV -d chi2 -p /home/Team4/Desktop/M1/data/BBDD/ -q /home/Team4/Desktop/M1/data/qsd1_w1/
+```
+```
+Computing the histograms of all the images of the database...
+100%|█████████████████████████████████████████| 287/287 [00:11<00:00, 24.00it/s]
+
+Computing the distances between histograms...
+100%|███████████████████████████████████████████| 30/30 [00:22<00:00,  1.31it/s]
+
+Pickle file stored with the best k=10 results for each query image in /home/Team4/Desktop/M1/Team4/week1/
+```
+
+- The images have background, the program is in development mode, only 1 image is retrieved, the histograms are computed using the YCrCb color space and the k images will be computed using all the possible distances:
+
+```
+$ python3 run.py -b y -m d -k 1 -c YCrCb -d all -p /home/Team4/Desktop/M1/data/BBDD/ -q /home/Team4/Desktop/M1/data/qsd1_w1/
 ```
 ```
 Estimating and substracting the background for every query image...
