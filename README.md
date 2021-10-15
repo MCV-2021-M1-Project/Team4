@@ -63,5 +63,14 @@ The images have background, the program is in development mode, only 1 image is 
 
 ```
 python3 run.py -b y -m d -k 1 -c YCrCb -d all -p /home/Team4/Desktop/M1/data/BBDD/ -q /home/Team4/Desktop/M1/data/qsd1_w1/
+
+Estimating and substracting the background for every query image...
+100%|███████████████████████████████████████████| 30/30 [00:45<00:00,  1.52s/it]
+
+Computing the histograms of all the images of the database...
+100%|█████████████████████████████████████████| 287/287 [00:12<00:00, 23.87it/s]
+
+Computing the distances between histograms...
+100%|███████████████████████████████████████████| 30/30 [00:23<00:00,  1.26it/s]
 ```
 
