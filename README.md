@@ -63,7 +63,8 @@ The images have background, the program is in development mode, only 1 image is 
 
 ```
 python3 run.py -b y -m d -k 1 -c YCrCb -d all -p /home/Team4/Desktop/M1/data/BBDD/ -q /home/Team4/Desktop/M1/data/qsd1_w1/
-
+```
+```
 Estimating and substracting the background for every query image...
 100%|███████████████████████████████████████████| 30/30 [00:25<00:00,  1.16it/s]
 
