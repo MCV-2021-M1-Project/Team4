@@ -102,6 +102,43 @@ def computeSimilarity(hist1, hist2, similarity_measure):
         return utils.euclidean_distance(hist1, hist2), utils.histogram_intersection(hist1, hist2), utils.l1_distance(hist1, hist2), utils.chi2_distance(hist1, hist2), utils.chi2alternative_distance(hist1, hist2), utils.hellinger_kernel(hist1, hist2)
 
 
+# -- CONNECTED COMPONENTS --
+
+def connected_components(mask):
+    kernel = np.ones((61,61),np.uint8)
+    mask_closed = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)    
+    mask_closed = np.array(mask_closed, dtype=np.uint8)
+
+    num_comp, components = cv2.connectedComponents(mask_closed)    
+
+    bincount = np.bincount(components.flatten())
+    bincount_nonzero = np.delete(bincount,0)
+    
+    if num_comp == 2:
+        index_1 = 1
+    else:
+        index_1 = np.argmax(bincount_nonzero) + 1
+    
+        bincount_nonzero = np.delete(bincount_nonzero,index_1 - 1)
+        index_2 = np.argmax(bincount_nonzero) + 1
+    
+        if index_1 <= index_2:
+            index_2 = index_2 + 1
+    
+    
+    
+    component1 = np.zeros((components.shape[0],components.shape[1]))
+    component1[components == index_1] = 1
+    
+    if num_comp > 2:
+        component2 = np.zeros((components.shape[0],components.shape[1]))
+        component2[components == index_2] = 1
+        
+        return [component1,component2]
+    
+    return [component1]
+    
+
 # -- BACKGROUND REMOVAL FUNCTIONS --
 
 def inliers_bounds(u):
@@ -161,6 +198,46 @@ def first_nonzero(arr, axis, invalid_val=-1):
 
     return first_n0
 
+def find_mask(connected_component):
+    # Find Upper and Bottom borders
+    # Takes the first non-zero element's index for each array's column
+    upper_border = first_nonzero(connected_component, axis=0, invalid_val=-1)
+    bottom_border = last_nonzero(connected_component, axis=0, invalid_val=-1)
+
+    # Find picture's edges coordinates
+    if (upper_border > -1).any():
+        ul_j,ul_i,ur_j,ur_i = bounds(upper_border)
+        bl_j,bl_i,br_j,br_i = bounds(bottom_border)
+
+        pointUL = [ul_i,ul_j] # Upper left point
+        pointUR = [ur_i,ur_j] # Upper right point
+        pointBL = [bl_i,bl_j] # Bottom left point
+        pointBR = [br_i,br_j] # Bottom right point
+
+        # Draw picture's contours
+        """ img_contours = cv2.line(cv2.cvtColor(img, cv2.COLOR_BGR2RGB),pointUL,pointUR, color=255,thickness =5)
+        img_contours = cv2.line(img_contours,pointUR,pointBR, color=255,thickness =5)
+        img_contours = cv2.line(img_contours,pointBR,pointBL, color=255,thickness =5)
+        img_contours = cv2.line(img_contours,pointBL,pointUL, color=255,thickness =5)
+        plt.imshow(img_contours)
+        plt.show() """
+
+        # Get the mask and convert it to unit8 to not have problems in cv2.CalcHist function later
+        mask = cv2.fillConvexPoly(np.zeros((connected_component.shape[0],connected_component.shape[1])),np.array([pointUL,pointUR,pointBR,pointBL]), color=1)
+        
+        """ mask = np.array(mask, dtype=np.uint8)
+        num_labels, labels = cv2.connectedComponents(mask)
+        print(num_labels, labels) """
+        
+        return mask.astype(np.uint8)
+
+        """ plt.imshow(mask, cmap='gray')
+        plt.show() """
+
+    else:
+        mask = np.zeros((connected_component.shape[0], connected_component.shape[1]), dtype="uint8")
+        
+        return mask
 
 # -- BACKGROUND REMOVAL EVALUATION FUNCTIONS
 
