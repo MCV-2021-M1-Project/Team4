@@ -97,8 +97,8 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="Python.pruebaHist" />
       <item itemvalue="Python.Pruebas" />
+      <item itemvalue="Python.pruebaHist" />
       <item itemvalue="Python.run" />
     </list>
     <recent_temporary>
