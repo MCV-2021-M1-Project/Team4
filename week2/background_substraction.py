@@ -23,7 +23,7 @@ def substractBackground(numImages, args):
     -------
     """
     print('Estimating and substracting the background for every query image...')
-    images = []
+    masks = []
     evaluations = []
     for j in tqdm(range(numImages)):
         img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
@@ -55,7 +55,7 @@ def substractBackground(numImages, args):
             pointBL = [bl_i,bl_j] # Bottom left point
             pointBR = [br_i,br_j] # Bottom right point
 
-            ## Draw picture's contours
+            # Draw picture's contours
             """ img_contours = cv2.line(cv2.cvtColor(img, cv2.COLOR_BGR2RGB),pointUL,pointUR, color=255,thickness =5)
             img_contours = cv2.line(img_contours,pointUR,pointBR, color=255,thickness =5)
             img_contours = cv2.line(img_contours,pointBR,pointBL, color=255,thickness =5)
@@ -63,37 +63,16 @@ def substractBackground(numImages, args):
             plt.imshow(img_contours)
             plt.show() """
 
-            ## Get the mask
+            # Get the mask and convert it to unit8 to not have problems in cv2.CalcHist function later
             mask = cv2.fillConvexPoly(np.zeros((img.shape[0],img.shape[1])),np.array([pointUL,pointUR,pointBR,pointBL]), color=1)
+            masks.append(mask.astype(np.uint8))
+
             """plt.imshow(mask, cmap='gray')
             plt.show()"""
-            # When a mask pixel is 1 save the corresping image pixel. On the other hand when a mask pixel is 0, remove
-            # remove the corresponding pixel
-            # The image is flattened
-            mask_flattened = mask.flatten()
-            img0 = img[:, :, 0].flatten()
-            img1 = img[:, :, 1].flatten()
-            img2 = img[:, :, 2].flatten()
-            img = np.concatenate((img0[:, np.newaxis], img1[:, np.newaxis], img2[:, np.newaxis]), axis=1)
-            masked_image = []
-            for i in range(len(mask_flattened)):
-                if mask_flattened[i] == 1:
-                    masked_image.append(img[i])
-            images.append(np.array(masked_image)[np.newaxis, :, :])
 
         else:
-            mask = np.zeros((img.shape[0], img.shape[1]))
-            mask_flattened = mask.flatten()
-            img0 = img[:, :, 0].flatten()
-            img1 = img[:, :, 1].flatten()
-            img2 = img[:, :, 2].flatten()
-            img = np.concatenate((img0[:, np.newaxis], img1[:, np.newaxis], img2[:, np.newaxis]), axis=1)
-            masked_image = []
-            for i in range(len(mask_flattened)):
-                if mask_flattened[i] == 1:
-                    masked_image.append(img[i])
-            print(np.array(masked_image)[np.newaxis, :, :])
-            images.append(np.array(masked_image)[np.newaxis, :, :])
+            mask = np.zeros((img.shape[0], img.shape[1]), dtype="unit8")
+            masks.append(mask)
 
         if args.m == 'd':
             # Evaluations
@@ -125,4 +104,4 @@ def substractBackground(numImages, args):
         print("Recall: {0:.4f}".format(evaluation_mean[1]))
         print("F1-measure: {0:.4f}".format(evaluation_mean[2]))
 
-    return images
+    return masks
