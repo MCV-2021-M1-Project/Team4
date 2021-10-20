@@ -9,6 +9,7 @@ from tqdm import tqdm
 from pathlib import Path
 from mapk import mapk
 from background_substraction import substractBackground
+from multiresolution import multiresolution
 from utils import computeHistImage, computeSimilarity, checkArguments, equalizeImage
 
 
@@ -20,6 +21,8 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(description='CBIR with different descriptors and distances')
     parser.add_argument('-b', type=str, required=True,
+                        help='Remove background from the images (y) or not (n)')
+    parser.add_argument('-r', type=str, default='n',
                         help='Remove background from the images (y) or not (n)')
     parser.add_argument('-m', type=str, default='d',
                         help='Define if the query set is for development (d) or test(t)')
@@ -41,10 +44,10 @@ def main():
     # Obtain the arguments
     args = parse_args()
 
-    # Check if the arguments are valid
+    # Check if the arguments are valid (utils.py)
     checkArguments(args)
 
-    # Obtain the associated image of the BBDD of each query image
+    # If the program is in Development, obtain the associated image of the BBDD of each query image
     if args.m == 'd':
         with open(args.q / "gt_corresps.pkl", 'rb') as f:
             data = pickle.load(f)
@@ -59,9 +62,9 @@ def main():
     BBDD_hist = []
     query_hist = []
 
-    # Hist of the query images
+    # OBTAINING THE HISTOGRAMS (all the possibilities: mulitresolution, background removal...)
 
-    # If the background does not have to be subtracted
+    # If the background does not have to be subtracted (-b == 'n')
     if args.b == "n":
         for j in range(t):
             img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
@@ -78,24 +81,45 @@ def main():
 
             BBDD_hist.append(computeHistImage(equalizeImage(db_img), color_space=args.c))
 
-    # If the background has to be subtracted
+    # If the background has to be subtracted (-b == 'y')
     elif args.b == "y":
-        query_masks = substractBackground(t, args=args)
-        for j in range(t):
-            img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
-            img = cv2.imread(img_file)
 
-            # Append all the query images histograms
-            query_hist.append(computeHistImage(img, color_space=args.c, mask=query_masks[j]))
+        if args.r == "n":
+            query_masks = substractBackground(t, args=args)
+            for j in range(t):
+                img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
+                img = cv2.imread(img_file)
 
-        # Hist of the database images
-        print()
-        print('Computing the histograms of all the images of the database...')
-        for j in tqdm(range(n)):
-            db_file = args.p.as_posix() + '/bbdd_00' + ('00' if j < 10 else ('0' if j < 100 else '')) + str(j) + '.jpg'
-            db_img = cv2.imread(db_file)
+                # Append all the query images histograms
+                query_hist.append(computeHistImage(img, color_space=args.c, mask=query_masks[j]))
 
-            BBDD_hist.append(computeHistImage(db_img, color_space=args.c))
+            # Hist of the database images
+            print()
+            print('Computing the histograms of all the images of the database...')
+            for j in tqdm(range(n)):
+                db_file = args.p.as_posix() + '/bbdd_00' + ('00' if j < 10 else ('0' if j < 100 else '')) + str(j) + '.jpg'
+                db_img = cv2.imread(db_file)
+
+                BBDD_hist.append(computeHistImage(db_img, color_space=args.c))
+
+        elif args.r == "y":
+            query_masks = substractBackground(t, args=args)
+            for j in range(t):
+                img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
+                img = cv2.imread(img_file)
+
+                # Append all the query images histograms
+                query_hist.append(multiresolution(img, color_space=args.c, mask=query_masks[j]))
+
+            # Hist of the database images
+            print()
+            print('Computing the histograms of all the images of the database...')
+            for j in tqdm(range(n)):
+                db_file = args.p.as_posix() + '/bbdd_00' + ('00' if j < 10 else ('0' if j < 100 else '')) + str(
+                    j) + '.jpg'
+                db_img = cv2.imread(db_file)
+
+                BBDD_hist.append(multiresolution(db_img, color_space=args.c))
 
     # List of lists
     exp_euclidean = []

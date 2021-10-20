@@ -1,12 +1,17 @@
-import cv2
 import numpy as np
+import cv2
 
-image = cv2.imread('/home/david/Desktop/M1/data/qst2_w1/00000.jpg')
-mask = cv2.imread('/home/david/Desktop/M1/Team4/week2/masks/00000.png')
-mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
-mask = mask.astype(np.uint8)
+image = cv2.imread('/home/david/Downloads/RGB_Color_Sample.jpg')
+image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+hist = cv2.calcHist([image], [0], None, [8], [0,256])
 
-image_color = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-hist = cv2.calcHist([image_color], [0,1,2], mask, [16,16,8], [0,256,0,256,0,256])
-hist = cv2.normalize(hist, hist)
-print(hist.shape)
+histograms = np.concatenate((hist))
+print(histograms.shape)
+print(cv2.calcHist([image], [0], None, [8], [0,256]).shape)
+histograms = np.concatenate((histograms, cv2.calcHist([image], [0], None, [8], [0,256]).flatten()))
+
+print(histograms)
+print(histograms.shape)
+print(cv2.calcHist([image], [0], None, [8], [0,256]).flatten().shape)
+
+
