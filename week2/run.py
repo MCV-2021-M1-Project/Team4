@@ -10,7 +10,8 @@ from pathlib import Path
 from mapk import mapk
 from background_substraction import substractBackground
 from multiresolution import multiresolution
-from utils import computeHistImage, computeSimilarity, checkArguments, equalizeImage
+from utils import checkArguments, equalizeImage, get_histograms_from_set
+from histograms import computeSimilarity
 
 
 def parse_args():
@@ -58,48 +59,47 @@ def main():
     # Obtain the number of query images
     t = len(glob.glob1(args.q, "*.jpg"))
 
-    # Histograms of all the images (BBDD + query set)
-    BBDD_hist = []
-    query_hist = []
+    query_hist = get_histograms_from_set(args.q, args)
+    BBDD_hist = get_histograms_from_set(args.p, args)
 
     # OBTAINING THE HISTOGRAMS (all the possibilities: mulitresolution, background removal...)
 
-    # If the background does not have to be subtracted (-b == 'n')
-    if args.b == "n":
-        for j in range(t):
-            img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
-            img = cv2.imread(img_file)
-
-            # Append all the query images histograms
-            query_hist.append(multiresolution(equalizeImage(img), color_space=args.c, level=args.r))
-
-        print()
-        print('Computing the histograms of all the images of the database...')
-        for j in tqdm(range(n)):
-            db_file = args.p.as_posix() + '/bbdd_00' + ('00' if j < 10 else ('0' if j < 100 else '')) + str(j) + '.jpg'
-            db_img = cv2.imread(db_file)
-
-            BBDD_hist.append(multiresolution(equalizeImage(db_img), color_space=args.c, level=args.r))
-
-    # If the background has to be subtracted (-b == 'y')
-    elif args.b == "y":
-
-        query_masks = substractBackground(numImages=t, query_path=args.q, mode=args.m)
-        for j in range(t):
-            img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
-            img = cv2.imread(img_file)
-
-            # Append all the query images histograms
-            query_hist.append(multiresolution(img, color_space=args.c, level=args.r, mask=query_masks[j]))
-
-        # Hist of the database images
-        print()
-        print('Computing the histograms of all the images of the database...')
-        for j in tqdm(range(n)):
-            db_file = args.p.as_posix() + '/bbdd_00' + ('00' if j < 10 else ('0' if j < 100 else '')) + str(j) + '.jpg'
-            db_img = cv2.imread(db_file)
-
-            BBDD_hist.append(multiresolution(db_img, color_space=args.c, level=args.r))
+    # # If the background does not have to be subtracted (-b == 'n')
+    # if args.b == "n":
+    #     for j in range(t):
+    #         img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
+    #         img = cv2.imread(img_file)
+    #
+    #         # Append all the query images histograms # equalizeImage(img)
+    #         query_hist.append(multiresolution(img, color_space=args.c, level=args.r))
+    #
+    #     print()
+    #     print('Computing the histograms of all the images of the database...')
+    #     for j in tqdm(range(n)):
+    #         db_file = args.p.as_posix() + '/bbdd_00' + ('00' if j < 10 else ('0' if j < 100 else '')) + str(j) + '.jpg'
+    #         db_img = cv2.imread(db_file)
+    #         #equalizeImage(db_img)
+    #         BBDD_hist.append(multiresolution(db_img, color_space=args.c, level=args.r))
+    #
+    # # If the background has to be subtracted (-b == 'y')
+    # elif args.b == "y":
+    #
+    #     query_masks = substractBackground(numImages=t, query_path=args.q, mode=args.m)
+    #     for j in range(t):
+    #         img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
+    #         img = cv2.imread(img_file)
+    #
+    #         # Append all the query images histograms
+    #         query_hist.append(multiresolution(img, color_space=args.c, level=args.r, mask=query_masks[j]))
+    #
+    #     # Hist of the database images
+    #     print()
+    #     print('Computing the histograms of all the images of the database...')
+    #     for j in tqdm(range(n)):
+    #         db_file = args.p.as_posix() + '/bbdd_00' + ('00' if j < 10 else ('0' if j < 100 else '')) + str(j) + '.jpg'
+    #         db_img = cv2.imread(db_file)
+    #
+    #         BBDD_hist.append(multiresolution(db_img, color_space=args.c, level=args.r))
 
     # List of lists
     exp_euclidean = []
@@ -173,7 +173,7 @@ def main():
             exp_hellinger.append(hellinger_distances.argsort(axis=0)[:args.k].tolist())
 
     if args.m == 'd':
-        print('mAP@k (K = {}) of the desired distances'.format(int(args.k)))
+        print('mAP@k (K = {}) of the desired distances for {} Color Space'.format(int(args.k), str(args.c)))
 
         if args.d == "all":
             print("Euclidean Distance: {0:.4f}".format(mapk(data, exp_euclidean, args.k)))

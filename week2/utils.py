@@ -1,6 +1,12 @@
+import glob
+import pickle
+from tqdm import tqdm
 import numpy as np
 import cv2
-import utils
+import os
+from multiresolution import multiresolution
+from background_substraction import substractBackground
+
 import matplotlib.pyplot as plt
 
 # -- CHECK ARGUMENTS --
@@ -19,178 +25,60 @@ def checkArguments(args):
 # -- PREPROCESSING --
 
 def equalizeImage(img):
+    # Equalizing Saturation and Lightness via HSV
     img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     h, s, v = cv2.split(img)
     eqV = cv2.equalizeHist(v)
     img = cv2.merge((h, s, eqV))
+    img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
     return img
 
 
 
-# -- SIMILARITY MEASURES --
+def get_histograms_from_set(path_set, args):
+    data_path = str(path_set).split('data')[0]+'data'
+    set_name = str(path_set).split('data')[1]
+    hists_path = data_path + '/histograms'
+    query_data_path = data_path + '/' + set_name
+    histogram_list_pkl = hists_path + '/' + set_name + '_' + args.c + '.pkl'
 
-def euclidean_distance(u,v):
-    return np.linalg.norm(u - v)
+    # Create dir if not exists
+    if(not os.path.exists(hists_path)):
+        os.mkdir(hists_path)
+    # Retrieve list or create it
+    if (os.path.exists(histogram_list_pkl)):
+        print('Loading histogram list from set: ' + set_name)
+        with open(histogram_list_pkl, 'rb') as f:
+            return pickle.load(f)
 
-def l1_distance(u,v):
-    return np.linalg.norm((u - v),ord=1)
+    else:
+        n = len(glob.glob1(args.q, "*.jpg"))
+        if args.b == "y" and not 'BBDD' in set_name:
+            mask = substractBackground(numImages=n, query_path=args.q, mode=args.m)
+        else:
+            mask = None
+        print('Computing the histograms of all the images of the set: ' + set_name)
+        files = [f for f in os.listdir(query_data_path) if (f.endswith('.jpg'))]
+        hist_list = []
+        j = 0
+        for filename in tqdm(files):
+            filename = os.fsdecode(filename)
+            if filename.endswith(".jpg"):
+                img = cv2.imread(os.path.join(query_data_path, filename))
+                try:
+                    m = mask[j]
+                except:
+                    m = None
+                #img = equalizeImage(img)
+                # Append all the query images histograms
+                hist_list.append(multiresolution(img, color_space=args.c, level=args.r, mask=m))
 
-def chi2_distance(u,v, eps=1e-10):
-    return 0.5 * np.sum([((a - b) ** 2) / (a + b + eps) for (a, b) in zip(u, v)])
+            else:
+                continue
+            j+=1
 
-def histogram_intersection(u,v):
-    return np.sum(np.minimum(u,v))
-    #return cv2.compareHist(u, v, cv2.HISTCMP_INTERSECT)
+        # Store list in pkl
+        with open(histogram_list_pkl, 'wb') as f:
+            pickle.dump(hist_list, f)
 
-def hellinger_kernel(u,v):
-    # return np.sum(np.sqrt(np.multiply(u,v)))
-    n = len(u)
-    sum = 0.0
-    for i in range(n):
-        sum += (np.sqrt(u[i]) - np.sqrt(v[i])) ** 2
-    result = (1.0 / np.sqrt(2.0)) * np.sqrt(sum)
-    return result
-    # return cv2.compareHist(u, v, cv2.HISTCMP_BHATTACHARYYA)
-
-# -- IMAGE RETRIEVAL FUNCTIONS --
-
-def computeHistImage(image, color_space, mask=None):
-    if color_space == "GRAY":
-        image_color = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        hist = cv2.calcHist([image_color], [0], mask, [16], [0, 256])
-        hist = cv2.normalize(hist, hist)
-    elif color_space == "RGB":
-        image_color = cv2.cvtColor(image, cv2.COLOR_BGR2RGB) # Already BGR
-        hist = cv2.calcHist([image_color], [0,1,2], mask, [8,8,8], [0,256,0,256,0,256])
-        hist = cv2.normalize(hist, hist)
-    elif color_space == "HSV":
-        image_color = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        hist = cv2.calcHist([image_color], [0,1,2], mask, [16,16,8], [0,256,0,256,0,256])
-        hist = cv2.normalize(hist, hist)
-    elif color_space == "YCrCb":
-        image_color = cv2.cvtColor(image, cv2.COLOR_BGR2YCrCb)
-        hist = cv2.calcHist([image_color], [0,1,2], mask, [8,8,8], [0,256,0,256,0,256])
-        hist = cv2.normalize(hist, hist)
-    elif color_space == "CIELab":
-        image_color = cv2.cvtColor(image, cv2.COLOR_BGR2Lab)
-        hist = cv2.calcHist([image_color], [0,1,2], mask, [8,16,16], [0,256,0,256,0,256])
-        hist = cv2.normalize(hist, hist)
-
-    # plt.plot(image_hist)
-    # plt.show()
-
-    return hist.flatten()
-
-def computeSimilarity(hist1, hist2, similarity_measure):
-    if similarity_measure == 'euclidean':
-        return utils.euclidean_distance(hist1, hist2)
-    elif similarity_measure == 'intersec':
-        return utils.histogram_intersection(hist1, hist2)
-    elif similarity_measure == 'l1':
-        return utils.l1_distance(hist1, hist2)
-    elif similarity_measure == 'chi2':
-        return utils.chi2_distance(hist1, hist2)
-    elif similarity_measure == 'hellinger':
-        return utils.hellinger_kernel(hist1, hist2)
-    elif similarity_measure == 'all':
-        return utils.euclidean_distance(hist1, hist2), utils.histogram_intersection(hist1, hist2), utils.l1_distance(hist1, hist2), utils.chi2_distance(hist1, hist2), utils.hellinger_kernel(hist1, hist2)
-
-
-# -- BACKGROUND REMOVAL FUNCTIONS --
-
-def inliers_bounds(u):
-    q1 = np.quantile(u, 0.25)  # First quantile
-    q3 = np.quantile(u, 0.75)  # Second quantile
-    q_inter = q3 - q1  # Interquantile interval
-
-    # Inliers bounds
-    upper_bound = q3 + 1.5 * q_inter
-    bottom_bound = q1 - 1.5 * q_inter
-
-    return upper_bound, bottom_bound
-
-def inliers(u):
-    # Detected border's must be close to each other
-    upper_bound, bottom_bound = inliers_bounds(np.extract(u != -1, u))
-
-    # Inliers
-    inliers = u
-    inliers[u > upper_bound] = -1
-    inliers[u < bottom_bound] = -1
-
-    return inliers
-
-def bounds(u):
-    i = inliers(u)
-
-    edges = np.argwhere(i != -1)  # Just inliers indexes
-
-    left_i = edges.min()
-    left_j = u[left_i]
-
-    right_i = edges.max()
-    right_j = u[right_i]
-
-    coordinates = [left_j, left_i, right_j, right_i]
-
-    return coordinates
-
-def last_nonzero(arr, axis, invalid_val=-1):
-    flipped_first_nonzero = first_nonzero(np.flip(arr), axis, invalid_val)
-    last_n0 = np.flip(flipped_first_nonzero)
-    last_n0[last_n0 != -1] = arr.shape[axis] - last_n0[last_n0 != -1]
-
-    return last_n0
-
-def first_nonzero(arr, axis, invalid_val=-1):
-    first_n0 = np.where(arr.any(axis=axis), arr.argmax(axis=axis), invalid_val)
-
-    if axis == 0:
-        a = arr[first_n0, np.arange(arr.shape[1])]
-        first_n0[a == 0] = -1
-
-    elif axis == 1:
-        a = arr[np.arange(arr.shape[0]), first_n0]
-        first_n0[a == 0] = -1
-
-    return first_n0
-
-
-# -- BACKGROUND REMOVAL EVALUATION FUNCTIONS
-
-def evaluation(predicted, truth):
-    tp = np.zeros(predicted.shape)
-    fp = np.zeros(predicted.shape)
-    fn = np.zeros(predicted.shape)
-
-    tp[(predicted[:, :] == 1) & (truth[:, :] == 1)] = 1
-    fp[(predicted[:, :] == 1) & (truth[:, :] == 0)] = 1
-    fn[(predicted[:, :] == 0) & (truth[:, :] == 1)] = 1
-
-    """ plt.subplot(221)
-    plt.imshow(predicted,cmap='gray')
-    plt.subplot(222)
-    plt.imshow(tp,cmap='gray')
-    plt.subplot(223)
-    plt.imshow(fp,cmap='gray')
-    plt.subplot(224)
-    plt.imshow(fn,cmap='gray')
-    plt.show() """
-
-    p = precision(tp, fp)
-    r = recall(tp, fn)
-    f1 = f1_measure(p, r)
-
-    return p, r, f1
-
-
-def precision(tp, fp):
-    return np.nan_to_num(np.sum(tp) / (np.sum(tp) + np.sum(fp)))
-
-
-def recall(tp, fn):
-    return np.nan_to_num(np.sum(tp) / (np.sum(tp) + np.sum(fn)))
-
-
-def f1_measure(p, r):
-    return np.nan_to_num(2 * p * r / (p + r))
+    return hist_list

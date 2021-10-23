@@ -1,10 +1,7 @@
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
-import math
-from pathlib import Path
-from utils import computeHistImage
-from background_substraction import substractBackground
+from histograms import computeHistImage
+
 
 def blockHistogram(image, color_space, mask=None):
 
@@ -42,6 +39,7 @@ def blockHistogram(image, color_space, mask=None):
         blockHists = np.concatenate((blockHists, computeHistImage(image, color_space=color_space, mask=masks[i])))
 
     return blockHists, masks
+
 
 def multiresolution(image, color_space, level, mask=None):
 
