@@ -18,9 +18,6 @@ for j in tqdm(range(numImages)):
     img_file = '../../data/qsd1_w2/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
     img = cv2.imread(img_file)
     
-    """ plt.imshow(img)
-    plt.show() """
-    
     # RGB to HSV
     hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
@@ -34,28 +31,134 @@ for j in tqdm(range(numImages)):
     v_tophat = cv2.morphologyEx(abs_v, cv2.MORPH_BLACKHAT, kernel)
     v_tophat = v_tophat/np.max(v_tophat)
     mask = np.zeros((img.shape[0], img.shape[1]))
-    
-    tophat_hist = cv2.calcHist([v_tophat], [0], None, [2], [0, 1])
-    plt.plot(tophat_hist)
-    plt.show()
+
     mask[v_tophat > 0.4] = 1
     
-    kernel = np.ones((3,1),np.uint8)
-    mas_closed = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-    kernel = np.ones((2,25),np.uint8)
-    mask_open = cv2.morphologyEx(mas_closed, cv2.MORPH_CLOSE, kernel)
+    ##Rellenar letras
+    """ kernel = np.ones((1,10),np.uint8) """
+    kernel = np.ones((2,10),np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
     
-    plt.subplot(221)
-    plt.imshow(v, cmap='gray')
-    plt.subplot(222)
-    plt.imshow(abs_v, cmap='gray')
-    plt.subplot(223)
-    plt.imshow(v_tophat, cmap='gray')
-    plt.subplot(224)
-    plt.imshow(mask_open, cmap='gray')
-    plt.show()
+    #Eliminar linea verticales
+    kernel = np.ones((1,3),np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
     
-    """ mask = np.zeros((img.shape[0], img.shape[1]))
+    ##Eliminar lineas horizontales
+    kernel = np.ones((4,1),np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    
+    ##Juntar letras y palabras
+    kernel = np.ones((1,29),np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    
+    num_comp, components = cv2.connectedComponents(mask.astype(np.uint8))    
+
+    bincount = np.bincount(components.flatten())
+    bincount_nonzero = np.delete(bincount,0)
+    
+    bincount_sorted = np.argsort(bincount_nonzero)[::-1] + 1
+    
+    max_cc = np.zeros((img.shape[0], img.shape[1]))
+    max_cc[components == bincount_sorted[0]] = 1
+    
+    limits = np.where(np.amax(max_cc,axis=1))
+    limit_sup = limits[0][0]
+    limit_inf = limits[0][-1]
+    
+    inter = limit_inf - limit_sup
+    
+    limit_sup = limit_sup - inter if limit_sup - inter > 0 else 0
+    limit_inf = limit_inf + inter if limit_inf + inter < img.shape[0] else img.shape[0]
+    
+    cropped_img = np.zeros((img.shape[0], img.shape[1]+202))
+    cropped_img[limit_sup:limit_inf,116:cropped_img.shape[1]-116] = v_tophat[limit_sup:limit_inf,15:img.shape[1]-15]
+    cropped_img = cropped_img/np.amax(cropped_img)
+    
+    
+    mask = np.zeros((cropped_img.shape[0], cropped_img.shape[1]))
+
+    mask[cropped_img > 0.45] = 1
+    
+    ##Rellenar letras
+    kernel = np.ones((5,14),np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    
+    #Eliminar linea verticales
+    kernel = np.ones((1,4),np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    
+    ##Eliminar lineas horizontales
+    kernel = np.ones((4,1),np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    
+    ##Juntar letras y palabras
+    kernel = np.ones((1,90),np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    
+    ##Eliminar lineas verticales
+    kernel = np.ones((1,2),np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    
+    num_comp, components = cv2.connectedComponents(mask.astype(np.uint8))    
+    
+    bincount = np.bincount(components.flatten())
+    bincount_nonzero = np.delete(bincount,0)
+    
+    bincount_sorted = np.argsort(bincount_nonzero)[::-1] + 1
+    
+    max_cc_2 = np.zeros((mask.shape[0], mask.shape[1]))
+    max_cc_2[components == bincount_sorted[0]] = 1
+    
+
+    
+    limits_vert = np.where(np.amax(max_cc_2[:,101:-101],axis=1))
+    limit_sup = limits_vert[0][0]
+    limit_inf = limits_vert[0][-1]
+    
+    limits_hor = np.where(np.amax(max_cc_2[:,101:-101],axis=0))
+    limit_left = limits_hor[0][0]
+    limit_right = limits_hor[0][-1]
+    
+    
+    inter = int((limit_inf - limit_sup)*0.5)
+    
+    limit_sup = limit_sup - inter if limit_sup - inter > 0 else 0
+    limit_inf = limit_inf + inter if limit_inf + inter < img.shape[0] else img.shape[0]
+
+    
+    limit_left = limit_left - inter if limit_left - inter > 0 else 0
+    limit_right = limit_right + inter if limit_right + inter < img.shape[1] else img.shape[1]
+    
+    cropped_img_2 = np.zeros((img.shape[0], img.shape[1]))
+    cropped_img_2[limit_sup:limit_inf,limit_left:limit_right] = 1
+    
+    pointUL = [limit_left,limit_sup]
+    pointUR = [limit_right,limit_sup]
+    pointBL = [limit_left,limit_inf]
+    pointBR = [limit_right,limit_inf]
+    
+
+    """ img_contours = cv2.line(cv2.cvtColor(img, cv2.COLOR_BGR2RGB),pointUL,pointUR, color=255,thickness =5)
+    img_contours = cv2.line(img_contours,pointUR,pointBR, color=255,thickness =5)
+    img_contours = cv2.line(img_contours,pointBR,pointBL, color=255,thickness =5)
+    img_contours = cv2.line(img_contours,pointBL,pointUL, color=255,thickness =5) """
+    
+    text_boxes = data[j][0]
+    ground_truth = cv2.fillConvexPoly(np.zeros((img.shape[0],img.shape[1])),np.array([text_boxes[0],text_boxes[1],text_boxes[2],text_boxes[3]]), color=1)
+    # Evaluation
+    ev = evaluation(cropped_img_2,ground_truth)
+    evaluations.append(ev)
+    
+
+evaluation_mean = np.sum(evaluations, axis=0) / numImages
+print()
+print("TEXT BOX SUBSTRACTION METHOD:")
+print("Precision: {0:.4f}".format(evaluation_mean[0]))
+print("Recall: {0:.4f}".format(evaluation_mean[1]))
+print("F1-measure: {0:.4f}".format(evaluation_mean[2]))
+    
+    
+""" mask = np.zeros((img.shape[0], img.shape[1]))
     mask[((s< 40) & (v < 60)) | ((s < 22) & (v > 200)) ] = 1
     
     
@@ -96,7 +199,7 @@ for j in tqdm(range(numImages)):
     evaluations.append(ev)
     print('image: ' + str(j),ev) """
     
-    """ plt.subplot(221)
+""" plt.subplot(221)
     plt.imshow(mask,cmap='gray')
     plt.subplot(222)
     plt.imshow(mask_closed, cmap='gray')
