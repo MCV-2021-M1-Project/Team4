@@ -105,9 +105,12 @@ def computeSimilarity(hist1, hist2, similarity_measure):
 # -- CONNECTED COMPONENTS --
 
 def connected_components(mask):
-    kernel = np.ones((61,61),np.uint8)
+    kernel = np.ones((63,63),np.uint8)
     mask_closed = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)    
     mask_closed = np.array(mask_closed, dtype=np.uint8)
+    
+    """ plt.subplot(222)
+    plt.imshow(mask_closed,cmap="gray") """
 
     num_comp, components = cv2.connectedComponents(mask_closed)    
 
@@ -130,9 +133,17 @@ def connected_components(mask):
     component1 = np.zeros((components.shape[0],components.shape[1]))
     component1[components == index_1] = 1
     
+
+    
     if num_comp > 2:
         component2 = np.zeros((components.shape[0],components.shape[1]))
         component2[components == index_2] = 1
+        
+        """ plt.subplot(223)
+        plt.imshow(component1, cmap="gray")
+        plt.subplot(224)
+        plt.imshow(component2, cmap="gray")
+        plt.show() """
         
         return [component1,component2]
     
@@ -165,7 +176,6 @@ def inliers(u):
 
 def bounds(u):
     i = inliers(u)
-
     edges = np.argwhere(i != -1)  # Just inliers indexes
 
     left_i = edges.min()
@@ -178,36 +188,39 @@ def bounds(u):
 
     return coordinates
 
-def last_nonzero(arr, axis, invalid_val=-1):
-    flipped_first_nonzero = first_nonzero(np.flip(arr), axis, invalid_val)
+def last_nonzero(arr, axis):
+    flipped_first_nonzero = first_nonzero(np.flip(arr), axis)
     last_n0 = np.flip(flipped_first_nonzero)
     last_n0[last_n0 != -1] = arr.shape[axis] - last_n0[last_n0 != -1]
 
     return last_n0
 
-def first_nonzero(arr, axis, invalid_val=-1):
-    first_n0 = np.where(arr.any(axis=axis), arr.argmax(axis=axis), invalid_val)
+def first_nonzero(arr, axis):
+    
+    first_n0 = np.where(arr.any(axis=axis), arr.argmax(axis=axis), -1)
 
     if axis == 0:
         a = arr[first_n0, np.arange(arr.shape[1])]
-        first_n0[a == 0] = -1
-
+        
     elif axis == 1:
         a = arr[np.arange(arr.shape[0]), first_n0]
-        first_n0[a == 0] = -1
+    
+    first_n0[a == 0] = -1
 
     return first_n0
 
 def find_mask(connected_component):
     # Find Upper and Bottom borders
     # Takes the first non-zero element's index for each array's column
-    upper_border = first_nonzero(connected_component, axis=0, invalid_val=-1)
-    bottom_border = last_nonzero(connected_component, axis=0, invalid_val=-1)
+    upper_border = first_nonzero(connected_component, axis=0)
+    bottom_border = last_nonzero(connected_component, axis=0)
+
 
     # Find picture's edges coordinates
     if (upper_border > -1).any():
         ul_j,ul_i,ur_j,ur_i = bounds(upper_border)
         bl_j,bl_i,br_j,br_i = bounds(bottom_border)
+        
 
         pointUL = [ul_i,ul_j] # Upper left point
         pointUR = [ur_i,ur_j] # Upper right point
@@ -225,14 +238,10 @@ def find_mask(connected_component):
         # Get the mask and convert it to unit8 to not have problems in cv2.CalcHist function later
         mask = cv2.fillConvexPoly(np.zeros((connected_component.shape[0],connected_component.shape[1])),np.array([pointUL,pointUR,pointBR,pointBL]), color=1)
         
-        """ mask = np.array(mask, dtype=np.uint8)
-        num_labels, labels = cv2.connectedComponents(mask)
-        print(num_labels, labels) """
+        """ plt.imshow(mask,cmap='gray',vmin=0,vmax=1)
+        plt.show() """
         
         return mask.astype(np.uint8)
-
-        """ plt.imshow(mask, cmap='gray')
-        plt.show() """
 
     else:
         mask = np.zeros((connected_component.shape[0], connected_component.shape[1]), dtype="uint8")
@@ -277,3 +286,38 @@ def recall(tp, fn):
 
 def f1_measure(p, r):
     return np.nan_to_num(2 * p * r / (p + r))
+
+## BOUNDING BOX
+
+def bounding_box(mask,img):
+    upper_border = first_nonzero(mask, axis=0)
+    bottom_border = last_nonzero(mask, axis=0)
+    
+    left_border  = first_nonzero(mask, axis = 1)
+    right_border = last_nonzero(mask, axis = 1)
+    
+    upper_border = inliers(upper_border)
+    bottom_border = inliers(bottom_border)
+    left_border = inliers(left_border)
+    right_border = inliers(right_border)
+    
+    up = np.amin(upper_border,initial = mask.shape[0],where = (upper_border > -1))
+    bottom = np.amax(bottom_border)
+    
+    left = np.amin(left_border,initial = mask.shape[1],where = (left_border > -1))
+    right = np.amax(right_border)
+    
+    pointUL = [left,up]
+    pointUR = [right,up]
+    pointBL = [left,bottom]
+    pointBR = [right,bottom]
+    
+    img_contours = cv2.line(cv2.cvtColor(img, cv2.COLOR_BGR2RGB),pointUL,pointUR, color=255,thickness =5)
+    img_contours = cv2.line(img_contours,pointUR,pointBR, color=255,thickness =5)
+    img_contours = cv2.line(img_contours,pointBR,pointBL, color=255,thickness =5)
+    img_contours = cv2.line(img_contours,pointBL,pointUL, color=255,thickness =5)
+    plt.imshow(img_contours)
+    
+    mask = cv2.fillConvexPoly(np.zeros((mask.shape[0],mask.shape[1])),np.array([pointUL,pointUR,pointBR,pointBL]), color=1)
+    
+    return mask

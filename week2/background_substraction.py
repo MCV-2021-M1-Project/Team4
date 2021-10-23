@@ -5,10 +5,10 @@ import os
 
 from PIL import Image
 from tqdm import tqdm
-from utils import first_nonzero, last_nonzero, bounds, evaluation, connected_components, find_mask
+from utils import evaluation, connected_components, find_mask
 
-TH_S = 114  # Saturation threshold
-TH_V = 63   # Value threshold
+TH_S = 112  # Saturation threshold
+TH_V = 59  # Value threshold
 
 
 def substractBackground(numImages, args):
@@ -26,7 +26,7 @@ def substractBackground(numImages, args):
     masks = []
     evaluations = []
     for j in tqdm(range(numImages)):
-        img_file = args.q + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
+        img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
         img = cv2.imread(img_file)
 
         # RGB to HSV
@@ -39,21 +39,26 @@ def substractBackground(numImages, args):
         # Saturation and Value thresholding
         thresholded = np.zeros((img.shape[0], img.shape[1]))
         thresholded[(s > TH_S) | (v < TH_V)] = 1
+        
+        """ plt.subplot(221)
+        plt.imshow(thresholded,cmap="gray") """
 
         # Find the two biggest connected components
         components = connected_components(thresholded)
         
         # Compute connected components' masks
         mask = np.zeros((img.shape[0], img.shape[1]),dtype="uint8")
-        
         for cc in range(len(components)):
             mask = mask | find_mask(components[cc])
 
         masks.append(mask)
+        
+        """ plt.imshow(mask,cmap='gray',vmin=0,vmax=1)
+        plt.show() """
 
         if args.m == 'd':
             # Evaluations
-            ground_truth_file = args.q + '/00' + ('00' if j < 10 else '0') + str(j) + '.png'
+            ground_truth_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.png'
             ground_truth = cv2.imread(ground_truth_file)
             ground_truth[ground_truth == 255] = 1  # Range [0,255] to [0,1]
 
