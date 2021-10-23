@@ -22,8 +22,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description='CBIR with different descriptors and distances')
     parser.add_argument('-b', type=str, required=True,
                         help='Remove background from the images (y) or not (n)')
-    parser.add_argument('-r', type=str, default='n',
-                        help='Remove background from the images (y) or not (n)')
+    parser.add_argument('-r', type=int, default='0',
+                        help='Define the resolution of the histogram')
     parser.add_argument('-m', type=str, default='d',
                         help='Define if the query set is for development (d) or test(t)')
     parser.add_argument('-k', type=int, default=10,
@@ -71,7 +71,7 @@ def main():
             img = cv2.imread(img_file)
 
             # Append all the query images histograms
-            query_hist.append(computeHistImage(equalizeImage(img), color_space=args.c))
+            query_hist.append(multiresolution(equalizeImage(img), color_space=args.c, level=args.r))
 
         print()
         print('Computing the histograms of all the images of the database...')
@@ -79,54 +79,33 @@ def main():
             db_file = args.p.as_posix() + '/bbdd_00' + ('00' if j < 10 else ('0' if j < 100 else '')) + str(j) + '.jpg'
             db_img = cv2.imread(db_file)
 
-            BBDD_hist.append(computeHistImage(equalizeImage(db_img), color_space=args.c))
+            BBDD_hist.append(multiresolution(equalizeImage(db_img), color_space=args.c, level=args.r))
 
     # If the background has to be subtracted (-b == 'y')
     elif args.b == "y":
 
-        if args.r == "n":
-            query_masks = substractBackground(t, args=args)
-            for j in range(t):
-                img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
-                img = cv2.imread(img_file)
+        query_masks = substractBackground(numImages=t, query_path=args.q, mode=args.m)
+        for j in range(t):
+            img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
+            img = cv2.imread(img_file)
 
-                # Append all the query images histograms
-                query_hist.append(computeHistImage(img, color_space=args.c, mask=query_masks[j]))
+            # Append all the query images histograms
+            query_hist.append(multiresolution(img, color_space=args.c, level=args.r, mask=query_masks[j]))
 
-            # Hist of the database images
-            print()
-            print('Computing the histograms of all the images of the database...')
-            for j in tqdm(range(n)):
-                db_file = args.p.as_posix() + '/bbdd_00' + ('00' if j < 10 else ('0' if j < 100 else '')) + str(j) + '.jpg'
-                db_img = cv2.imread(db_file)
+        # Hist of the database images
+        print()
+        print('Computing the histograms of all the images of the database...')
+        for j in tqdm(range(n)):
+            db_file = args.p.as_posix() + '/bbdd_00' + ('00' if j < 10 else ('0' if j < 100 else '')) + str(j) + '.jpg'
+            db_img = cv2.imread(db_file)
 
-                BBDD_hist.append(computeHistImage(db_img, color_space=args.c))
-
-        elif args.r == "y":
-            query_masks = substractBackground(t, args=args)
-            for j in range(t):
-                img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
-                img = cv2.imread(img_file)
-
-                # Append all the query images histograms
-                query_hist.append(multiresolution(img, color_space=args.c, mask=query_masks[j]))
-
-            # Hist of the database images
-            print()
-            print('Computing the histograms of all the images of the database...')
-            for j in tqdm(range(n)):
-                db_file = args.p.as_posix() + '/bbdd_00' + ('00' if j < 10 else ('0' if j < 100 else '')) + str(
-                    j) + '.jpg'
-                db_img = cv2.imread(db_file)
-
-                BBDD_hist.append(multiresolution(db_img, color_space=args.c))
+            BBDD_hist.append(multiresolution(db_img, color_space=args.c, level=args.r))
 
     # List of lists
     exp_euclidean = []
     exp_intersection = []
     exp_l1 = []
     exp_chi2 = []
-    exp_chi2alt = []
     exp_hellinger = []
 
     print()
@@ -140,7 +119,6 @@ def main():
         instersection_distances = np.array([])
         l1_distances = np.array([])
         chi2_distances = np.array([])
-        chi2alt_distances = np.array([])
         hellinger_distances = np.array([])
 
         for i in range(n):
@@ -150,12 +128,11 @@ def main():
 
             # Compute the distances
             if args.d == "all":
-                eucl_temp, instersection_temp, l1_temp, chi2_temp, chi2alt_temp, hellinger_temp = computeSimilarity(hist, db_hist, similarity_measure='all')
+                eucl_temp, instersection_temp, l1_temp, chi2_temp, hellinger_temp = computeSimilarity(hist, db_hist, similarity_measure='all')
                 eucl_distances = np.append(eucl_distances, eucl_temp)
                 instersection_distances = np.append(instersection_distances, instersection_temp)
                 l1_distances = np.append(l1_distances, l1_temp)
                 chi2_distances = np.append(chi2_distances, chi2_temp)
-                chi2alt_distances = np.append(chi2alt_distances, chi2alt_temp)
                 hellinger_distances = np.append(hellinger_distances, hellinger_temp)
 
             elif args.d == "euclidean":
@@ -166,9 +143,6 @@ def main():
 
             elif args.d == "l1":
                 l1_distances = np.append(l1_distances, computeSimilarity(hist, db_hist, similarity_measure='l1'))
-
-            elif args.d == "chi2":
-                chi2_distances = np.append(chi2_distances, computeSimilarity(hist, db_hist, similarity_measure='chi2'))
 
             elif args.d == "chi2alt":
                 chi2alt_distances = np.append(chi2alt_distances, computeSimilarity(hist, db_hist, similarity_measure='chi2alt'))
@@ -181,7 +155,6 @@ def main():
             exp_intersection.append(np.flip(instersection_distances.argsort(axis=0)[-args.k:]).tolist())
             exp_l1.append(l1_distances.argsort(axis=0)[:args.k].tolist())
             exp_chi2.append(chi2_distances.argsort(axis=0)[:args.k].tolist())
-            exp_chi2alt.append(chi2alt_distances.argsort(axis=0)[:args.k].tolist())
             exp_hellinger.append(hellinger_distances.argsort(axis=0)[:args.k].tolist())
 
         elif args.d == "euclidean":
@@ -192,9 +165,6 @@ def main():
 
         elif args.d == "chi2":
             exp_chi2.append(chi2_distances.argsort(axis=0)[:args.k].tolist())
-
-        elif args.d == "chi2alt":
-            exp_chi2alt.append(chi2alt_distances.argsort(axis=0)[:args.k].tolist())
 
         elif args.d == "l1":
             exp_l1.append(l1_distances.argsort(axis=0)[:args.k].tolist())
@@ -210,7 +180,6 @@ def main():
             print("Histogram Intersection: {0:.4f}".format(mapk(data, exp_intersection, args.k)))
             print("L1 Distance: {0:.4f}".format(mapk(data, exp_l1, args.k)))
             print("Chi-Squared Distance: {0:.4f}".format(mapk(data, exp_chi2, args.k)))
-            print("Alternative Chi-Squared Distance: {0:.4f}".format(mapk(data, exp_chi2alt, args.k)))
             print("Hellinger Distance: {0:.4f}".format(mapk(data, exp_hellinger, args.k)))
 
         elif args.d == "euclidean":
@@ -221,9 +190,6 @@ def main():
 
         elif args.d == "chi2":
             print("Chi-Squared Distance: {0:.4f}".format(mapk(data, exp_chi2, args.k)))
-
-        elif args.d == "chi2alt":
-            print("Alternative Chi-Squared Distance: {0:.4f}".format(mapk(data, exp_chi2alt, args.k)))
 
         elif args.d == "l1":
             print("L1 Distance: {0:.4f}".format(mapk(data, exp_l1, args.k)))
@@ -241,9 +207,6 @@ def main():
         elif args.d == "chi2":
             with open('result.pkl', 'wb') as f:
                 pickle.dump(exp_chi2, f)
-        elif args.d == "chi2alt":
-            with open('result.pkl', 'wb') as f:
-                pickle.dump(exp_chi2alt, f)
         elif args.d == "l1":
             with open('result.pkl', 'wb') as f:
                 pickle.dump(exp_l1, f)

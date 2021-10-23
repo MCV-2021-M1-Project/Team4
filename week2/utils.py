@@ -10,7 +10,7 @@ def checkArguments(args):
         raise TypeError("The modes of the code are: development(d) and test(t)")
     if args.c not in ["GRAY", "RGB", "HSV", "YCrCb", "CIELab"]:
         raise TypeError("Wrong color space")
-    if args.d not in ["all", "euclidean", "intersec", "l1", "chi2", "chi2alt2", "hellinger", "chi2alt"]:
+    if args.d not in ["all", "euclidean", "intersec", "l1", "chi2", "hellinger", "chi2alt"]:
         raise TypeError("Wrong distance")
     if args.m == 't' and args.d == 'all':
         raise Exception("The test mode cannot be done with all the distances at the same time given that only one "
@@ -23,7 +23,8 @@ def equalizeImage(img):
     h, s, v = cv2.split(img)
     eqV = cv2.equalizeHist(v)
     img = cv2.merge((h, s, eqV))
-    return cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
+    return img
+
 
 
 # -- SIMILARITY MEASURES --
@@ -37,15 +38,11 @@ def l1_distance(u,v):
 def chi2_distance(u,v, eps=1e-10):
     return 0.5 * np.sum([((a - b) ** 2) / (a + b + eps) for (a, b) in zip(u, v)])
 
-def chi2alternative_distance(u,v):
-    return cv2.compareHist(u, v, cv2.HISTCMP_CHISQR_ALT)
-
 def histogram_intersection(u,v):
-    # return np.sum(np.minimum(u,v))
-    return cv2.compareHist(u, v, cv2.HISTCMP_INTERSECT)
+    return np.sum(np.minimum(u,v))
+    #return cv2.compareHist(u, v, cv2.HISTCMP_INTERSECT)
 
 def hellinger_kernel(u,v):
-    """
     # return np.sum(np.sqrt(np.multiply(u,v)))
     n = len(u)
     sum = 0.0
@@ -53,8 +50,7 @@ def hellinger_kernel(u,v):
         sum += (np.sqrt(u[i]) - np.sqrt(v[i])) ** 2
     result = (1.0 / np.sqrt(2.0)) * np.sqrt(sum)
     return result
-    """
-    return cv2.compareHist(u, v, cv2.HISTCMP_BHATTACHARYYA)
+    # return cv2.compareHist(u, v, cv2.HISTCMP_BHATTACHARYYA)
 
 # -- IMAGE RETRIEVAL FUNCTIONS --
 
@@ -94,12 +90,10 @@ def computeSimilarity(hist1, hist2, similarity_measure):
         return utils.l1_distance(hist1, hist2)
     elif similarity_measure == 'chi2':
         return utils.chi2_distance(hist1, hist2)
-    elif similarity_measure == 'chi2alt':
-        return utils.chi2alternative_distance(hist1, hist2)
     elif similarity_measure == 'hellinger':
         return utils.hellinger_kernel(hist1, hist2)
     elif similarity_measure == 'all':
-        return utils.euclidean_distance(hist1, hist2), utils.histogram_intersection(hist1, hist2), utils.l1_distance(hist1, hist2), utils.chi2_distance(hist1, hist2), utils.chi2alternative_distance(hist1, hist2), utils.hellinger_kernel(hist1, hist2)
+        return utils.euclidean_distance(hist1, hist2), utils.histogram_intersection(hist1, hist2), utils.l1_distance(hist1, hist2), utils.chi2_distance(hist1, hist2), utils.hellinger_kernel(hist1, hist2)
 
 
 # -- BACKGROUND REMOVAL FUNCTIONS --

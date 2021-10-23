@@ -11,14 +11,14 @@ TH_S = 114  # Saturation threshold
 TH_V = 63   # Value threshold
 
 
-def substractBackground(numImages, args):
+def substractBackground(numImages, query_path, mode):
     """
     Function to substract the background from the images
     Parameters
     ----------
     numImages: number of images of the query set
-    args: input parameters
-
+    query_path: path to the query set
+    mode: mode of the program (d ot t)
     Returns: List of images with the background removed. The images are flat (1 empty dimension), their shape is lost
     -------
     """
@@ -26,7 +26,7 @@ def substractBackground(numImages, args):
     masks = []
     evaluations = []
     for j in tqdm(range(numImages)):
-        img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
+        img_file = query_path.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
         img = cv2.imread(img_file)
 
         # RGB to HSV
@@ -74,9 +74,9 @@ def substractBackground(numImages, args):
             mask = np.zeros((img.shape[0], img.shape[1]), dtype="unit8")
             masks.append(mask)
 
-        if args.m == 'd':
+        if mode == 'd':
             # Evaluations
-            ground_truth_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.png'
+            ground_truth_file = query_path.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.png'
             ground_truth = cv2.imread(ground_truth_file)
             ground_truth[ground_truth == 255] = 1  # Range [0,255] to [0,1]
 
@@ -84,7 +84,7 @@ def substractBackground(numImages, args):
             evaluations.append(evaluation(mask, ground_truth[:, :, 0]))
 
         # If the query set is test, save all the image masks in a directory called masks
-        elif args.m == 't':
+        elif mode == 't':
             for x in range(mask.shape[0]):
                 for y in range(mask.shape[1]):
                     if mask[x, y] == 1:
@@ -95,7 +95,7 @@ def substractBackground(numImages, args):
             mask_file = 'masks/00' + ('00' if j < 10 else '0') + str(j) + '.png'
             cv2.imwrite(mask_file, mask)
 
-    if args.m == 'd':
+    if mode == 'd':
 
         evaluation_mean = np.sum(evaluations, axis=0) / numImages
         print()

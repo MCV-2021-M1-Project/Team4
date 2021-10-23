@@ -2,11 +2,11 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+from pathlib import Path
 from utils import computeHistImage
+from background_substraction import substractBackground
 
-NUM_BLOCKS = 2
-
-def multiresolution(image, color_space, mask=None):
+def blockHistogram(image, color_space, mask=None):
 
     # If background has been applied to the image, compute the centroids of the mask
     if mask is not None:
@@ -19,16 +19,15 @@ def multiresolution(image, color_space, mask=None):
     else:
         # h: height, w: width, c: channels(not used)
         h, w, c = image.shape
-        cX = int(h/NUM_BLOCKS)
-        cY = int(h/NUM_BLOCKS)
-
+        cX = int(w / 2)
+        cY = int(h / 2)
     # List in which all the masks are stored
     masks = []
     pos = 0
 
     # From the centroid (either from the BBDD image or from the mask) divide the image in 4 different masks
-    for i in range(NUM_BLOCKS):
-        for j in range(NUM_BLOCKS):
+    for i in range(2):
+        for j in range(2):
             masks.append(np.zeros((image.shape[0], image.shape[1]), dtype="uint8"))
             masks[pos][cY * i: cY * (i + 1), cX * j: cX * (j + 1)] = 1
             pos = pos + 1
@@ -38,17 +37,45 @@ def multiresolution(image, color_space, mask=None):
         for i in range(len(masks)):
             masks[i] = masks[i] * mask
 
+    blockHists = np.array([])
+    for i in range(len(masks)):
+        blockHists = np.concatenate((blockHists, computeHistImage(image, color_space=color_space, mask=masks[i])))
+
+    return blockHists, masks
+
+def multiresolution(image, color_space, level, mask=None):
+
     # Compute the histogram of the original whole image and store it in a variable in which all the
     # histograms will be concatenated
     histograms = np.concatenate(computeHistImage(image, color_space=color_space, mask=mask)[:,np.newaxis])
 
-    # Compute the multiresolution histograms and concatenate them
-    for i in range(len(masks)):
-        histograms = np.concatenate((histograms, computeHistImage(image, color_space=color_space, mask=masks[i])))
+    # Compute the 2nd level histograms (4 blocks) and concatenate them to the histogram variable
+    if level >= 2:
+        blockHistograms, masks = blockHistogram(image, color_space, mask=mask)
+        histograms = np.concatenate((histograms, blockHistograms))
+
+    # Compute the 3rd level histograms (16 blocks) and concatenate them to the histogram variable
+    if level == 3:
+        for i in range(len(masks)):
+            blockHistograms, block_masks = blockHistogram(image, color_space, mask=masks[i])
+            histograms = np.concatenate((histograms, blockHistograms))
 
     return histograms
 
-    
+"""
+image = cv2.imread('/home/david/Desktop/M1/data/BBDD/bbdd_00015.jpg')
+
+#masks = substractBackground(numImages=30, query_path=Path('/home/david/Desktop/M1/data/qsd2_w1/'), mode='d')
+
+# mask = masks[1]
+
+
+histograms_bbdd = multiresolution(image=image, color_space='GRAY', level=3, mask=None)
+#histograms_query = multiresolution(image=image, color_space='GRAY', level=3, mask=mask)
+
+print(histograms_query.shape, histograms_bbdd.shape)
+"""
+
     
     
     
