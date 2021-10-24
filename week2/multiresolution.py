@@ -1,11 +1,15 @@
 import cv2
 import numpy as np
 from histograms import computeHistImage
+import matplotlib.pyplot as plt
 
 
 def blockHistogram(image, color_space, mask=None):
 
     # If background has been applied to the image, compute the centroids of the mask
+    print(type(mask))
+    """ plt.imshow(mask)
+    plt.show() """
     if mask is not None:
         M = cv2.moments(mask)
         cX = int(M["m10"] / M["m00"])
@@ -42,7 +46,8 @@ def blockHistogram(image, color_space, mask=None):
 
 
 def multiresolution(image, color_space, level, type, mask=None):
-
+    """ plt.imshow(image)
+    plt.show() """
     if type == 'pyramid':
         # Compute the histogram of the original whole image and store it in a variable in which all the
         # histograms will be concatenated

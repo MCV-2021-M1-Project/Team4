@@ -140,26 +140,26 @@ def main():
         print('mAP@k (K = {}) of the desired distances for {} Color Space and Level {}'.format(int(args.k), str(args.c), str(args.r)))
 
         if args.d == "all":
-            print("Euclidean Distance: {0:.4f}".format(mapk(data, exp_euclidean, args.k, mapk_type)))
-            print("Histogram Intersection: {0:.4f}".format(mapk(data, exp_intersection, args.k, mapk_type)))
-            print("L1 Distance: {0:.4f}".format(mapk(data, exp_l1, args.k, mapk_type)))
-            print("Chi-Squared Distance: {0:.4f}".format(mapk(data, exp_chi2, args.k, mapk_type)))
-            print("Hellinger Distance: {0:.4f}".format(mapk(data, exp_hellinger, args.k, mapk_type)))
+            print("Euclidean Distance: {0:.4f}".format(mapk(data, exp_euclidean, args.k,set_name)))
+            print("Histogram Intersection: {0:.4f}".format(mapk(data, exp_intersection, args.k,set_name)))
+            print("L1 Distance: {0:.4f}".format(mapk(data, exp_l1, args.k,set_name)))
+            print("Chi-Squared Distance: {0:.4f}".format(mapk(data, exp_chi2, args.k,set_name)))
+            print("Hellinger Distance: {0:.4f}".format(mapk(data, exp_hellinger, args.k,set_name)))
 
         elif args.d == "euclidean":
-            print("Euclidean Distance: {0:.4f}".format(mapk(data, exp_euclidean, args.k, mapk_type)))
+            print("Euclidean Distance: {0:.4f}".format(mapk(data, exp_euclidean, args.k,set_name)))
 
         elif args.d == "intersec":
-            print("Histogram Intersection: {0:.4f}".format(mapk(data, exp_intersection, args.k, mapk_type)))
+            print("Histogram Intersection: {0:.4f}".format(mapk(data, exp_intersection, args.k,set_name)))
 
         elif args.d == "chi2":
-            print("Chi-Squared Distance: {0:.4f}".format(mapk(data, exp_chi2, args.k, mapk_type)))
+            print("Chi-Squared Distance: {0:.4f}".format(mapk(data, exp_chi2, args.k,set_name)))
 
         elif args.d == "l1":
-            print("L1 Distance: {0:.4f}".format(mapk(data, exp_l1, args.k, mapk_type)))
+            print("L1 Distance: {0:.4f}".format(mapk(data, exp_l1, args.k,set_name)))
 
         elif args.d == "hellinger":
-            print("Hellinger Distance: {0:.4f}".format(mapk(data, exp_hellinger, args.k, mapk_type)))
+            print("Hellinger Distance: {0:.4f}".format(mapk(data, exp_hellinger, args.k,set_name)))
 
     elif args.m == 't':
         if args.d == "euclidean":

@@ -27,11 +27,9 @@ def substractBackground(numImages, args):
     for j in tqdm(range(numImages)):
 
         img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
-        if not '0021' in img_file:
-            continue
 
         img = cv2.imread(img_file)
-        print(img_file)
+        """ print(img_file) """
         # plt.imshow(img)
         # plt.show()
         # RGB to HSV
@@ -45,12 +43,12 @@ def substractBackground(numImages, args):
         thresholded = np.zeros((img.shape[0], img.shape[1]))
         thresholded[(s > TH_S) | (v < TH_V)] = 1
 
-        plt.subplot(221)
-        plt.imshow(thresholded,cmap="gray")
+        """ plt.subplot(221)
+        plt.imshow(thresholded,cmap="gray") """
 
         # Find the two biggest connected components
         # If 2 paintings it outputs 2 components
-        components = connected_components(thresholded)
+        components = connected_components(thresholded,set_name)
 
         # Compute connected components' masks
         mask = np.zeros((img.shape[0], img.shape[1]), dtype="uint8")
@@ -62,31 +60,86 @@ def substractBackground(numImages, args):
             overlapping = overlapping * mask_cc
             every_mask.append(mask_cc)
 
-        if overlapping.any() == 1 and not ('qsd1_w2' or 'qst1_w2'):
-            mask_size = 0
-            for e in every_mask:
-                aux = np.sum(e)
 
-                if mask_size < aux:
-                    mask_size = aux
-                    mask = e
+        if set_name == '/qsd2_w2' or set_name == '/qst2_w2':
+            if overlapping.any() == 1:
+                mask_size = 0
+                for e in every_mask:
+                    aux = np.sum(e)
 
-            text_box = bounding_box(v, mask)
-            text_boxes.append(text_box)
+                    if mask_size < aux:
+                        mask_size = aux
+                        mask = e
+
+                if set_name == '/qsd1_w2' or set_name == '/qsd2_w2' or set_name == '/qst1_w2' or set_name == '/qst2_w2':
+                    text_box = bounding_box(v, mask)
+                    
+                    
+                    point1 = [text_box[0],text_box[1]]
+                    point2 = [text_box[2],text_box[1]]
+                    point3 = [text_box[0],text_box[3]]
+                    point4 = [text_box[2],text_box[3]]
+                    
+                    """ [pointUL, pointUR, pointBR, pointBL] """
+                    
+                    text_mask = cv2.fillConvexPoly(np.zeros((img.shape[0],img.shape[1])),np.array([point1,point2,point4,point3]), color=1)
+                    mask = mask | text_mask.astype(np.uint8)
+        
+                    text_boxes.append(text_box)
+                
+                masks.append([mask])
 
 
+            else:
+                for e in every_mask:
+                    # print( e.flatten().sum())
+                    # if e.flatten().sum() <  5000:
+                    #     continue
+                    mask = mask | find_mask(e)
+                    if set_name == '/qsd1_w2' or set_name == '/qsd2_w2' or set_name == '/qst1_w2' or set_name == '/qst2_w2':
+                        text_box = bounding_box(v, e)
+                        text_boxes.append(text_box)
+                        point1 = [text_box[0],text_box[1]]
+                        point2 = [text_box[2],text_box[1]]
+                        point3 = [text_box[0],text_box[3]]
+                        point4 = [text_box[2],text_box[3]]
+                        
+                        text_mask = cv2.fillConvexPoly(np.zeros((img.shape[0],img.shape[1])),np.array([point1,point2,point4,point3]), color=1)
+                        mask = mask | text_mask.astype(np.uint8)
+                        
+                    
+                masks.append([mask])
+                        
         else:
             for e in every_mask:
                 # print( e.flatten().sum())
                 # if e.flatten().sum() <  5000:
                 #     continue
+                if set_name == '/qsd1_w2' or set_name == '/qst1_w2':
+                    e = np.ones((img.shape[0],img.shape[1]))
                 mask = mask | find_mask(e)
-                text_box = bounding_box(v, e)
-                text_boxes.append(text_box)
+                
+                if set_name != '/BBDD':
+                    text_box = bounding_box(v, e)
+                    text_boxes.append(text_box)
+                
+                
+                    point1 = [text_box[0],text_box[1]]
+                    point2 = [text_box[2],text_box[1]]
+                    point3 = [text_box[0],text_box[3]]
+                    point4 = [text_box[2],text_box[3]]
+
+                    
+                    mask = cv2.fillConvexPoly(mask,np.array([point1,point2,point4,point3]), color=0)
+                    """ plt.imshow(mask)
+                    plt.show() """
+                
+            masks.append([mask])
+            """ mask = mask | text_mask.astype(np.uint8) """
 
         overall_textboxes.append(text_boxes)
 
-        if args.m == 'd' and 'qsd2_w2' in set_name:
+        if args.m == 'd' and '/qsd2_w2' in set_name:
             # Evaluations
             ground_truth_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.png'
             ground_truth = cv2.imread(ground_truth_file)
@@ -107,7 +160,7 @@ def substractBackground(numImages, args):
             mask_file = 'masks/00' + ('00' if j < 10 else '0') + str(j) + '.png'
             cv2.imwrite(mask_file, mask)
 
-    if args.m == 'd' and not ('qsd1_w2' or 'qst1_w2'):
+    if args.m == 'd' and not ('/qsd1_w2' or '/qst1_w2'):
         evaluation_mean = np.sum(evaluations, axis=0) / numImages
         print()
         print("BACKGROUND SUBSTRACTION MEASURES:")
@@ -115,8 +168,11 @@ def substractBackground(numImages, args):
         print("Recall: {0:.4f}".format(evaluation_mean[1]))
         print("F1-measure: {0:.4f}".format(evaluation_mean[2]))
 
-
-    return masks, overall_textboxes
+    if set_name == '/qsd1_w2' or set_name == '/qsd2_w2' or set_name == '/qst1_w2' or set_name == '/qst2_w2':
+        return masks, overall_textboxes
+    
+    else:
+        return masks
 
 
 # -- CONNECTED COMPONENTS --
@@ -126,53 +182,61 @@ def biggest_cc(mask):
     bincount = np.delete(bincount, 0)  # Just CC  != 0
     bincount_sorted = np.argsort(bincount)[::-1] + 1
     mask_cc = np.zeros((cc.shape[0], cc.shape[1]))
+    
     try:
         mask_cc[cc == bincount_sorted[0]] = 1
     except:
-        print("error mask")
+        """ print("error mask") """
+        return np.ones((cc.shape[0], cc.shape[1]))
     return mask_cc
 
 
-def connected_components(mask):
+def connected_components(mask,set_name):
     kernel = np.ones((63, 63), np.uint8)
     mask_closed = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
     mask_closed = np.array(mask_closed, dtype=np.uint8)
 
-    plt.subplot(222)
-    plt.imshow(mask_closed,cmap="gray")
+    """ plt.subplot(222)
+    plt.imshow(mask_closed,cmap="gray") """
 
     num_comp, components = cv2.connectedComponents(mask_closed)
 
     bincount = np.bincount(components.flatten())
     bincount_nonzero = np.delete(bincount, 0)
 
-    if num_comp == 2:
-        index_1 = 1
+    if set_name == '/qsd2_w2':
+        if num_comp == 2:
+            index_1 = 1
+        else:
+            index_1 = np.argmax(bincount_nonzero) + 1
+
+            bincount_nonzero = np.delete(bincount_nonzero, index_1 - 1)
+            index_2 = np.argmax(bincount_nonzero) + 1
+
+            if index_1 <= index_2:
+                index_2 = index_2 + 1
+                
     else:
-        index_1 = np.argmax(bincount_nonzero) + 1
-
-        bincount_nonzero = np.delete(bincount_nonzero, index_1 - 1)
-        index_2 = np.argmax(bincount_nonzero) + 1
-
-        if index_1 <= index_2:
-            index_2 = index_2 + 1
+        index_1 = 1
 
     component1 = np.zeros((components.shape[0], components.shape[1]))
     component1[components == index_1] = 1
 
-    if num_comp > 2:
-        component2 = np.zeros((components.shape[0], components.shape[1]))
-        component2[components == index_2] = 1
+    if set_name == '/qsd2_w2':
+        if num_comp > 2:
+            component2 = np.zeros((components.shape[0], components.shape[1]))
+            component2[components == index_2] = 1
 
-        # plt.subplot(223)
-        # plt.imshow(component1, cmap="gray")
-        # plt.subplot(224)
-        # plt.imshow(component2, cmap="gray")
-        # plt.show()
+            # plt.subplot(223)
+            # plt.imshow(component1, cmap="gray")
+            # plt.subplot(224)
+            # plt.imshow(component2, cmap="gray")
+            # plt.show()
 
-        return [component1, component2]
-    plt.subplot(223)
-    plt.imshow(component1, cmap="gray")
+            return [component1, component2]
+    
+    """ plt.subplot(223)
+    plt.imshow(component1, cmap="gray") """
     # plt.show()
     return [component1]
 
@@ -371,6 +435,9 @@ def bounding_box(value, mask=[]):
 
     ##Find biggest connected component
     cc = biggest_cc(mask.astype(np.uint8))
+    
+    """ plt.imshow(cc)
+    plt.show() """
 
     # Find component's rectangle's i coordinates
     coord_i = np.where(np.amax(cc[:, 101:-101], axis=1))
