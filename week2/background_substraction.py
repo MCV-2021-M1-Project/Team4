@@ -138,6 +138,10 @@ def substractBackground(numImages, args):
             """ mask = mask | text_mask.astype(np.uint8) """
 
         overall_textboxes.append(text_boxes)
+        
+        if set_name == '/qst1_w2' or set_name == '/qst2_w2':
+            with open(args.q.as_posix() + 'results.pkl','wb') as f:
+                f.write(overall_textboxes)
 
         if args.m == 'd' and '/qsd2_w2' in set_name:
             # Evaluations
