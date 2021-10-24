@@ -1,17 +1,14 @@
 import argparse
-import pickle
-import cv2
-import os
 import glob
-import numpy as np
-import pathlib
-from tqdm import tqdm
+import pickle
 from pathlib import Path
-from mapk import mapk
-from background_substraction import substractBackground
-from multiresolution import multiresolution
-from utils import checkArguments, equalizeImage, get_histograms_from_set
+
+import numpy as np
+from tqdm import tqdm
+
 from histograms import computeSimilarity
+from mapk import mapk
+from utils import checkArguments, get_histograms_from_set
 
 
 def parse_args():
@@ -25,6 +22,10 @@ def parse_args():
                         help='Remove background from the images (y) or not (n)')
     parser.add_argument('-r', type=int, default='0',
                         help='Define the resolution of the histogram')
+    parser.add_argument('-rt', type=str, default='pyramid',
+                        help='Define the type: pyramid or level')
+    parser.add_argument('-t', type=str, default='n',
+                        help='If the images have text (y) or (n)')
     parser.add_argument('-m', type=str, default='d',
                         help='Define if the query set is for development (d) or test(t)')
     parser.add_argument('-k', type=int, default=10,
@@ -62,44 +63,8 @@ def main():
     query_hist = get_histograms_from_set(args.q, args)
     BBDD_hist = get_histograms_from_set(args.p, args)
 
-    # OBTAINING THE HISTOGRAMS (all the possibilities: mulitresolution, background removal...)
-
-    # # If the background does not have to be subtracted (-b == 'n')
-    # if args.b == "n":
-    #     for j in range(t):
-    #         img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
-    #         img = cv2.imread(img_file)
-    #
-    #         # Append all the query images histograms # equalizeImage(img)
-    #         query_hist.append(multiresolution(img, color_space=args.c, level=args.r))
-    #
-    #     print()
-    #     print('Computing the histograms of all the images of the database...')
-    #     for j in tqdm(range(n)):
-    #         db_file = args.p.as_posix() + '/bbdd_00' + ('00' if j < 10 else ('0' if j < 100 else '')) + str(j) + '.jpg'
-    #         db_img = cv2.imread(db_file)
-    #         #equalizeImage(db_img)
-    #         BBDD_hist.append(multiresolution(db_img, color_space=args.c, level=args.r))
-    #
-    # # If the background has to be subtracted (-b == 'y')
-    # elif args.b == "y":
-    #
-    #     query_masks = substractBackground(numImages=t, query_path=args.q, mode=args.m)
-    #     for j in range(t):
-    #         img_file = args.q.as_posix() + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
-    #         img = cv2.imread(img_file)
-    #
-    #         # Append all the query images histograms
-    #         query_hist.append(multiresolution(img, color_space=args.c, level=args.r, mask=query_masks[j]))
-    #
-    #     # Hist of the database images
-    #     print()
-    #     print('Computing the histograms of all the images of the database...')
-    #     for j in tqdm(range(n)):
-    #         db_file = args.p.as_posix() + '/bbdd_00' + ('00' if j < 10 else ('0' if j < 100 else '')) + str(j) + '.jpg'
-    #         db_img = cv2.imread(db_file)
-    #
-    #         BBDD_hist.append(multiresolution(db_img, color_space=args.c, level=args.r))
+    set_name = str(args.q).split('data')[1]
+    mapk_type = 'multiple' if 'qsd1_w2' in set_name else 'single'
 
     # List of lists
     exp_euclidean = []
@@ -111,7 +76,6 @@ def main():
     print()
     print('Computing the distances between histograms...')
     for j in tqdm(range(t)):
-
         # Obtain the histogram of the query image j
         hist = query_hist[j]
 
@@ -173,29 +137,29 @@ def main():
             exp_hellinger.append(hellinger_distances.argsort(axis=0)[:args.k].tolist())
 
     if args.m == 'd':
-        print('mAP@k (K = {}) of the desired distances for {} Color Space'.format(int(args.k), str(args.c)))
+        print('mAP@k (K = {}) of the desired distances for {} Color Space and Level {}'.format(int(args.k), str(args.c), str(args.r)))
 
         if args.d == "all":
-            print("Euclidean Distance: {0:.4f}".format(mapk(data, exp_euclidean, args.k)))
-            print("Histogram Intersection: {0:.4f}".format(mapk(data, exp_intersection, args.k)))
-            print("L1 Distance: {0:.4f}".format(mapk(data, exp_l1, args.k)))
-            print("Chi-Squared Distance: {0:.4f}".format(mapk(data, exp_chi2, args.k)))
-            print("Hellinger Distance: {0:.4f}".format(mapk(data, exp_hellinger, args.k)))
+            print("Euclidean Distance: {0:.4f}".format(mapk(data, exp_euclidean, args.k, mapk_type)))
+            print("Histogram Intersection: {0:.4f}".format(mapk(data, exp_intersection, args.k, mapk_type)))
+            print("L1 Distance: {0:.4f}".format(mapk(data, exp_l1, args.k, mapk_type)))
+            print("Chi-Squared Distance: {0:.4f}".format(mapk(data, exp_chi2, args.k, mapk_type)))
+            print("Hellinger Distance: {0:.4f}".format(mapk(data, exp_hellinger, args.k, mapk_type)))
 
         elif args.d == "euclidean":
-            print("Euclidean Distance: {0:.4f}".format(mapk(data, exp_euclidean, args.k)))
+            print("Euclidean Distance: {0:.4f}".format(mapk(data, exp_euclidean, args.k, mapk_type)))
 
         elif args.d == "intersec":
-            print("Histogram Intersection: {0:.4f}".format(mapk(data, exp_intersection, args.k)))
+            print("Histogram Intersection: {0:.4f}".format(mapk(data, exp_intersection, args.k, mapk_type)))
 
         elif args.d == "chi2":
-            print("Chi-Squared Distance: {0:.4f}".format(mapk(data, exp_chi2, args.k)))
+            print("Chi-Squared Distance: {0:.4f}".format(mapk(data, exp_chi2, args.k, mapk_type)))
 
         elif args.d == "l1":
-            print("L1 Distance: {0:.4f}".format(mapk(data, exp_l1, args.k)))
+            print("L1 Distance: {0:.4f}".format(mapk(data, exp_l1, args.k, mapk_type)))
 
         elif args.d == "hellinger":
-            print("Hellinger Distance: {0:.4f}".format(mapk(data, exp_hellinger, args.k)))
+            print("Hellinger Distance: {0:.4f}".format(mapk(data, exp_hellinger, args.k, mapk_type)))
 
     elif args.m == 't':
         if args.d == "euclidean":

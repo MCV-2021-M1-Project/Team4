@@ -40,23 +40,22 @@ def get_histograms_from_set(path_set, args):
     set_name = str(path_set).split('data')[1]
     hists_path = data_path + '/histograms'
     query_data_path = data_path + '/' + set_name
-    histogram_list_pkl = hists_path + '/' + set_name + '_' + args.c + '.pkl'
+    histogram_list_pkl = hists_path + '/' + set_name + '_' + args.c + '_' + args.rt+ '_' + str(args.r) +'.pkl'
 
     # Create dir if not exists
     if(not os.path.exists(hists_path)):
         os.mkdir(hists_path)
-    # Retrieve list or create it
-    if (os.path.exists(histogram_list_pkl)):
-        print('Loading histogram list from set: ' + set_name)
-        with open(histogram_list_pkl, 'rb') as f:
-            return pickle.load(f)
 
+        # Retrieve list or create it
+        if (os.path.exists(histogram_list_pkl)):
+            print('Loading histogram list from set: ' + set_name)
+            with open(histogram_list_pkl, 'rb') as f:
+                return pickle.load(f)
     else:
         n = len(glob.glob1(args.q, "*.jpg"))
-        if args.b == "y" and not 'BBDD' in set_name:
-            mask = substractBackground(numImages=n, query_path=args.q, mode=args.m)
-        else:
-            mask = None
+        # if args.b == "y" and not 'BBDD' in set_name:
+        mask, coords = substractBackground(numImages=n, args=args)
+
         print('Computing the histograms of all the images of the set: ' + set_name)
         files = [f for f in os.listdir(query_data_path) if (f.endswith('.jpg'))]
         hist_list = []
@@ -65,13 +64,15 @@ def get_histograms_from_set(path_set, args):
             filename = os.fsdecode(filename)
             if filename.endswith(".jpg"):
                 img = cv2.imread(os.path.join(query_data_path, filename))
+
                 try:
+                    # Interseccion
                     m = mask[j]
                 except:
                     m = None
                 #img = equalizeImage(img)
                 # Append all the query images histograms
-                hist_list.append(multiresolution(img, color_space=args.c, level=args.r, mask=m))
+                hist_list.append(multiresolution(img, color_space=args.c, level=args.r, type=args.rt, mask=m))
 
             else:
                 continue

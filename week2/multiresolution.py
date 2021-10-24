@@ -41,22 +41,34 @@ def blockHistogram(image, color_space, mask=None):
     return blockHists, masks
 
 
-def multiresolution(image, color_space, level, mask=None):
+def multiresolution(image, color_space, level, type, mask=None):
 
-    # Compute the histogram of the original whole image and store it in a variable in which all the
-    # histograms will be concatenated
-    histograms = np.concatenate(computeHistImage(image, color_space=color_space, mask=mask)[:,np.newaxis])
+    if type == 'pyramid':
+        # Compute the histogram of the original whole image and store it in a variable in which all the
+        # histograms will be concatenated
+        histograms = np.concatenate(computeHistImage(image, color_space=color_space, mask=mask)[:,np.newaxis])
 
-    # Compute the 2nd level histograms (4 blocks) and concatenate them to the histogram variable
-    if level >= 2:
-        blockHistograms, masks = blockHistogram(image, color_space, mask=mask)
-        histograms = np.concatenate((histograms, blockHistograms))
-
-    # Compute the 3rd level histograms (16 blocks) and concatenate them to the histogram variable
-    if level == 3:
-        for i in range(len(masks)):
-            blockHistograms, block_masks = blockHistogram(image, color_space, mask=masks[i])
+        # Compute the 2nd level histograms (4 blocks) and concatenate them to the histogram variable
+        if level >= 2:
+            blockHistograms, masks = blockHistogram(image, color_space, mask=mask)
             histograms = np.concatenate((histograms, blockHistograms))
+
+        # Compute the 3rd level histograms (16 blocks) and concatenate them to the histogram variable
+        if level == 3:
+            for i in range(len(masks)):
+                blockHistograms, block_masks = blockHistogram(image, color_space, mask=masks[i])
+                histograms = np.concatenate((histograms, blockHistograms))
+    else:
+        # Compute the 2nd level histograms (4 blocks) and concatenate them to the histogram variable
+        if level > 1:
+            blockHistograms2, masks2 = blockHistogram(image, color_space, mask=mask) # Level 2
+            if level == 2:
+                histograms = blockHistograms2
+            else:
+                histograms = np.array([])
+                for i in range(len(masks2)):
+                    blockHistograms3, block_masks = blockHistogram(image, color_space, mask=masks2[i])
+                    histograms = np.concatenate((histograms, blockHistograms3))
 
     return histograms
 

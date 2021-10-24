@@ -38,28 +38,40 @@ def apk(actual, predicted, k=10):
 
     return score / min(len(actual), k)
 
-def mapk(actual, predicted, k=10):
+def mapk(actual, predicted, k=10, mapk_type = 'multiple'):
     """
     Computes the mean average precision at k.
-
     This function computes the mean average prescision at k between two lists
     of lists of items.
-
     Parameters
     ----------
     actual : list
-             A list of lists of elements that are to be predicted 
+             A list of lists of elements that are to be predicted
              (order doesn't matter in the lists)
     predicted : list
                 A list of lists of predicted elements
                 (order matters in the lists)
     k : int, optional
         The maximum number of predicted elements
-
     Returns
     -------
     score : double
             The mean average precision at k over the input lists
-
     """
-    return np.mean([apk(a,p,k) for a,p in zip(actual, predicted)])
+    type = 'multiple'
+    if type =='multiple':
+        x = []
+        for it in predicted:
+            for a in it:
+                x.append(a)
+
+        y = []
+        for it in actual:
+            for a in it:
+                li = [a]
+                y.append(li)
+    else:
+        x = predicted
+        y = actual
+
+    return np.mean([apk(a,p,k) for a,p in zip(y, x)])
