@@ -1,4 +1,5 @@
 import os
+import pickle
 
 import cv2
 import numpy as np
@@ -141,7 +142,7 @@ def substractBackground(numImages, args):
         
         if set_name == '/qst1_w2' or set_name == '/qst2_w2':
             with open(args.q.as_posix() + 'results.pkl','wb') as f:
-                f.write(overall_textboxes)
+                pickle.dump(overall_textboxes, f)
 
         if args.m == 'd' and '/qsd2_w2' in set_name:
             # Evaluations
