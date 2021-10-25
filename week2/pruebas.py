@@ -1,12 +1,15 @@
-import cv2
 import numpy as np
+import cv2
+import pickle
+"""
+a = np.array([0, 3, 0, 1, 0, 1, 2, 1, 0, 0, 0, 0, 1, 3, 4])
+unique, counts = np.unique(a, return_counts=True)
+reps = dict(zip(unique, counts))
 
-image = cv2.imread('/home/david/Desktop/M1/data/qst2_w1/00000.jpg')
-mask = cv2.imread('/home/david/Desktop/M1/Team4/week2/masks/00000.png')
-mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
-mask = mask.astype(np.uint8)
+print(reps[0], reps[1])
+"""
 
-image_color = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-hist = cv2.calcHist([image_color], [0,1,2], mask, [16,16,8], [0,256,0,256,0,256])
-hist = cv2.normalize(hist, hist)
-print(hist.shape)
+with open("/home/david/Desktop/M1/Team4/week2/result.pkl", 'rb') as f:
+    data = pickle.load(f)
+
+print(data)
