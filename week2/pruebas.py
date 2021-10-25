@@ -1,20 +1,15 @@
 import numpy as np
 import cv2
-
+import pickle
 """
-image = cv2.imread('/home/david/Downloads/RGB_Color_Sample.jpg')
-image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-hist = cv2.calcHist([image], [0], None, [8], [0,256])
+a = np.array([0, 3, 0, 1, 0, 1, 2, 1, 0, 0, 0, 0, 1, 3, 4])
+unique, counts = np.unique(a, return_counts=True)
+reps = dict(zip(unique, counts))
 
-histograms = np.concatenate((hist))
-print(histograms.shape)
-print(cv2.calcHist([image], [0], None, [8], [0,256]).shape)
-histograms = np.concatenate((histograms, cv2.calcHist([image], [0], None, [8], [0,256]).flatten()))
-
-print(histograms)
-print(histograms.shape)
-print(cv2.calcHist([image], [0], None, [8], [0,256]).flatten().shape)
+print(reps[0], reps[1])
 """
-print(2<=2)
 
+with open("/home/david/Desktop/M1/Team4/week2/result.pkl", 'rb') as f:
+    data = pickle.load(f)
 
+print(data)

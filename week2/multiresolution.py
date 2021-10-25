@@ -7,9 +7,13 @@ import matplotlib.pyplot as plt
 def blockHistogram(image, color_space, mask=None):
 
     # If background has been applied to the image, compute the centroids of the mask
-    print(type(mask))
-    """ plt.imshow(mask)
-    plt.show() """
+    # print(type(mask))
+    """
+    f, axxr = plt.subplots(2)
+    axxr[0].imshow(mask, cmap='gray')
+    axxr[1].imshow(image)
+    plt.show()
+    """
     if mask is not None:
         M = cv2.moments(mask)
         cX = int(M["m10"] / M["m00"])
@@ -48,6 +52,11 @@ def blockHistogram(image, color_space, mask=None):
 def multiresolution(image, color_space, level, type, mask=None):
     """ plt.imshow(image)
     plt.show() """
+    # CHAPUZA PARA SI LA MASCARA ES MALA (ES DECIR ES CASI TOODO NEGRO) INVERTIRTLA
+    count = np.count_nonzero(mask == 255)
+    if (mask.shape[0]*mask.shape[1])-count > count:
+        mask = 255 - mask
+
     if type == 'pyramid':
         # Compute the histogram of the original whole image and store it in a variable in which all the
         # histograms will be concatenated
