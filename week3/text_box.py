@@ -2,6 +2,14 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 
+# TODO: 
+# Text-boxes are always centered in the picture center
+# Text-boces are always in the upper part or the bottom part of the pictures
+# Text-boxes must remain inside the picture's mask
+# Width is always bigger than height
+# Width is at least 1/3*(picture's width)
+# Height is at most/ 1/2*(picture's height)
+
 def bounding_box(img,mask = None):
     height = img.shape[0]
     width = img.shape[1]
