@@ -5,6 +5,7 @@ import numpy as np
 TH_S = 114  # Saturation threshold
 TH_V = 63   # Value threshold
 
+# File in which all the fucntions needed to substract the background are. Either the evaluation functions.
 
 def substractBackground(image):
     """
