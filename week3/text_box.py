@@ -65,15 +65,9 @@ def bounding_box(img,mask = None):
     bottom = bottom + inter if bottom + inter < height else height - 10
     left = left - inter if left - inter > 0 else 30
     right = right + inter if right + inter < width else width -30
+    coordinates = [left, top, right, bottom]
 
-    point1 = [left,top]
-    point2 = [right,top]
-    point3 = [right,bottom]
-    point4 = [left,bottom]
-    
-    text_mask = cv2.fillConvexPoly(mask,np.array([point1,point2,point3,point4]), color=0)
-
-    return text_mask
+    return coordinates
 
 # -- CONNECTED COMPONENTS --
 
