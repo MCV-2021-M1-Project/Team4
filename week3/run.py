@@ -11,6 +11,7 @@ from colorDescriptors import colorDescriptors
 from text_box import bounding_box
 from similarities import hellingerDistance
 from evaluation import mapk, bbox_iou
+from noise_detection_and_removal import remove_noise
 
 
 def parse_args():
@@ -66,6 +67,8 @@ def main():
     for i in range(n_query_images):
         img_file = args.q.as_posix() + '/00' + ('00' if i < 10 else '0') + str(i) + '.jpg'
         img = cv2.imread(img_file)
+
+        img = remove_noise(img)
 
         # Compute the text box
         [left, top, right, bottom] = bounding_box(img)
