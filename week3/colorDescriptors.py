@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
+# FILE WITH ALL THE FUNCTIONS WHICH DEAL WITH COMPUTING THE COLOR DESCRIPTORS OF A PAINTING
+
 def colorDescriptors(image, block=1, mask = None):
     """
     Compute the color (HSV) descriptors of the image. The function has the possibility of computing the histogram
@@ -13,7 +15,7 @@ def colorDescriptors(image, block=1, mask = None):
     """
     # If block == 1 compute and return the histogram of the entire image
     if block == 1:
-        return computeHistogram(image=image, mask=mask)
+        return np.float32(computeHistogram(image=image, mask=mask))
 
     # If block greater or equal than 2, compute the first level of block histograms
     elif block >= 2:
@@ -21,7 +23,7 @@ def colorDescriptors(image, block=1, mask = None):
 
         #  If block == 2 return the histograms of level 2
         if block == 2:
-            return histogram
+            return np.float32(histogram)
 
         # If block == 3, compute and return the 16 histograms concatenated from the level 2 masks.
         else:
@@ -30,7 +32,7 @@ def colorDescriptors(image, block=1, mask = None):
                 blockhists, subsubmasks = blockHistogram(image, mask=submask)
                 histograms = np.concatenate((histograms, blockhists))
 
-            return histograms
+            return np.float32(histograms)
 
 # -- AUXILIARY FUNCTIONS --
 
