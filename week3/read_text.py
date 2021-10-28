@@ -8,19 +8,20 @@ import ast
 from text_box import bounding_box
 
 
-def read_text(img,bounding_box):
-    [left, top, right, bottom] = bounding_box
+def read_text(img,bbox):
+    [left, top, right, bottom] = bbox
     
     text_img = img[top:bottom,left:right]  # Crop image
     extractedInformation = pytesseract.image_to_string(text_img)
     
-    # If we don't find text in the 
+    # If we don't find text in the image, we try with a bigger bbox
     if extractedInformation[:-1] == '':
         top = top - 5 if top-5 > 0 else 0
         bottom = bottom + 5 if bottom + 5 < img.shape[0] else 0
         text_img = img[top:bottom,left:right]
         extractedInformation = pytesseract.image_to_string(text_img)
         
+    # If we don't find text in the image, we try with a smaler bbox
     if extractedInformation[:-1] == '':
         if bottom - top > 20:
             top = top + 10
