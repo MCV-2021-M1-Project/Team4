@@ -35,6 +35,9 @@ def bounding_box(img,mask = None):
     mask_left = mask_components[2][1,cv2.CC_STAT_LEFT]
     mask_right = mask_components[2][1,cv2.CC_STAT_LEFT] + mask_components[2][1,cv2.CC_STAT_WIDTH]
     mask_width = mask_components[2][1,cv2.CC_STAT_WIDTH]
+    mask_top = mask_components[2][1,cv2.CC_STAT_TOP]
+    mask_bottom = mask_components[2][1,cv2.CC_STAT_TOP] + mask_components[2][1,cv2.CC_STAT_HEIGHT]
+    mask_height = mask_components[2][1,cv2.CC_STAT_HEIGHT]
     
     mask_aux = mask # Auxiliar mask
     mask_aux[:,mask_left:mask_left + int(mask_width * 0.12)] = 0
@@ -63,17 +66,21 @@ def bounding_box(img,mask = None):
     text_mask = expanded_mask[30:-30,11:-11]            # We reduce the previously expanded mask
     
     ## STEP 3. Find the biggest connected component's coordinates
-    [left, top, right, bottom] = biggest_component(text_mask)
+    bbox = biggest_component(text_mask)
+    if bbox == []:
+      bbox = [mask_left, mask_top, mask_right, mask_bottom]  
+    [left, top, right, bottom] = bbox
 
     ## STEP 4. Crop the original image --> As detected components represent text and not 
     # bounding box, we have to expand top and bottom coordinates to detect the bounding box
     inter = bottom - top
     top = top - inter if top - inter > 0 else 0
-    bottom = bottom + inter if bottom + inter < height else height - 10   
+    bottom = bottom + inter if bottom + inter < height - 10 else height - 10   
 
     blackhat_box = np.zeros((height, width + 200))                     # We make the width bigger to avoid problems with morphological filters arriving to edges
     blackhat_box[top:bottom, 130: -130] = blackhat[top:bottom, 30:-30] # Take original blackhat image's values in that zone. We do not take values from the edges of the image, as textbox i in the center
     blackhat_box = blackhat_box / np.amax(blackhat_box)                # Normalize
+    
     
     ### 2. ITERATION ###
     ## STEP 1. Blackhat and thresholding
@@ -89,14 +96,19 @@ def bounding_box(img,mask = None):
     text_mask = expanded_mask[:,100:-100] #Reduce the previously expanded mask
 
     ## STEP 3. Find the biggest connected component's coordinates
-    [left, top, right, bottom] = biggest_component(text_mask)
-
+    bbox = biggest_component(text_mask)
+    
+    if bbox == []:
+      bbox = [mask_left, mask_top, mask_right, mask_bottom]  
+    [left, top, right, bottom] = bbox
+    
+    print(bbox)
     ## STEP 4. Crop the original image --> Expand coordinates and take original image's values in that zone
     inter = int((bottom - top) * 0.5)
     top = top - inter if top - inter > 0 else 0
-    bottom = bottom + inter if bottom + inter < height else height - 10
-    left = left - inter if left - inter > 0 else 30
-    right = right + inter if right + inter < width else width -30
+    bottom = bottom + inter if bottom + inter < height - 10 else height - 10
+    left = left - inter if left - inter > 30 else 30
+    right = right + inter if right + inter < width -30 else width -30
     
     # Some corrections: Text bounding boxes are always centered in the picture.
     # So, we are going to center it
@@ -127,7 +139,11 @@ def bounding_box(img,mask = None):
     text_mask = expanded_mask[:,100:-100]
     
     ## STEP 3. Find the biggest connected components coordinates
-    [left,top,right,bottom] = biggest_component(text_mask)
+    bbox = biggest_component(text_mask)
+    
+    if bbox == []:
+        bbox = [mask_left, mask_top, mask_right, mask_bottom] 
+    [left, top, right, bottom] = bbox
     
     ## STEP 4. Crop the original image --> Applying some corrections
     central_line = mask[top + int((bottom - top)/2),:]
@@ -146,11 +162,10 @@ def bounding_box(img,mask = None):
     correction_w = int(height_text*0.23)
     top = (top - correction_h) if (top - correction_h) > 0 else 0
     bottom = (bottom + correction_h) if (bottom + correction_h) < height else height
-    left = left - correction_w
-    right = right + correction_w
+    left = left - correction_w if left - correction_w > 0 else 0
+    right = right + correction_w if right + correction_w < width else width
     
     coordinates = [left, top, right, bottom] # Bounding box's coordinates
-
     return coordinates
 
 # -- CONNECTED COMPONENTS --
@@ -186,9 +201,9 @@ def biggest_component(mask):
             return biggest_component(mask) # If conditions are not satisfied, let's try with the next biggest connected component
         
     else: # If we don't detect any connected component, the component will be the hole image
-        left = components[2][0,cv2.CC_STAT_LEFT]
+        """ left = components[2][0,cv2.CC_STAT_LEFT]
         top = components[2][0,cv2.CC_STAT_TOP]
         right = left + components[2][0,cv2.CC_STAT_WIDTH]
-        bottom = top + components[2][0,cv2.CC_STAT_HEIGHT]
-        return left, top, right, bottom
+        bottom = top + components[2][0,cv2.CC_STAT_HEIGHT] """
+        return []
     
