@@ -5,23 +5,7 @@ import numpy as np
 # -- RETRIEVAL EVALUATION --
 
 def apk(actual, predicted, k=10):
-    """
-    Computes the average precision at k.
-    This function computes the average prescision at k between two lists of
-    items.
-    Parameters
-    ----------
-    actual : list
-             A list of elements that are to be predicted (order doesn't matter)
-    predicted : list
-                A list of predicted elements (order does matter)
-    k : int, optional
-        The maximum number of predicted elements
-    Returns
-    -------
-    score : double
-            The average precision at k over the input lists
-    """
+
     if len(predicted)>k:
         predicted = predicted[:k]
 
@@ -39,26 +23,26 @@ def apk(actual, predicted, k=10):
     return score / min(len(actual), k)
 
 def mapk(actual, predicted, k=10):
-    """
-    Computes the mean average precision at k.
-    This function computes the mean average prescision at k between two lists
-    of lists of items.
-    Parameters
-    ----------
-    actual : list
-             A list of lists of elements that are to be predicted
-             (order doesn't matter in the lists)
-    predicted : list
-                A list of lists of predicted elements
-                (order matters in the lists)
-    k : int, optional
-        The maximum number of predicted elements
-    Returns
-    -------
-    score : double
-            The mean average precision at k over the input lists
-    """
+
     return np.mean([apk(a,p,k) for a,p in zip(actual, predicted)])
+
+def mapk2paintings(actual, predicted, k=10):
+    """
+    mapk for 2 paintings
+    """
+
+    x = []
+    for it in predicted:
+        for a in it:
+            x.append(a)
+
+    y = []
+    for it in actual:
+        for a in it:
+            li = [a]
+            y.append(li)
+
+    return np.mean([apk(a,p,k) for a,p in zip(y, x)])
 
 # -- BACKGROUND SUBTRACTION EVALUATION --
 

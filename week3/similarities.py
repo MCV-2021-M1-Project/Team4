@@ -24,3 +24,4 @@ def chi2_distance(u,v, eps=1e-10):
 
 def histogram_intersection(u,v):
     return np.sum(np.minimum(u,v))
+

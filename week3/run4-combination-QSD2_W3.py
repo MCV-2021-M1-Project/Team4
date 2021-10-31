@@ -9,10 +9,11 @@ from pathlib import Path
 from tqdm import tqdm
 from text_box import bounding_box
 from similarities import hellingerDistance, euclidean_distance, l1_distance, chi2_distance, histogram_intersection
-from evaluation import mapk, bbox_iou
+from evaluation import mapk, bbox_iou, mapk2paintings
 from noise_detection_and_removal import remove_noise
 import os
 from read_text import read_text,extractTextGroundTruth, compareArguments
+from background_substraction import substractBackground
 
 def parse_args():
     """
@@ -134,69 +135,76 @@ def main():
     for i in tqdm(range(n_query_images)):
 
         img_file = args.q.as_posix() + '/00' + ('00' if i < 10 else '0') + str(i) + '.jpg'
-
-        ## Pocess Query images
+        # print(img_file)
+        # if not '00001' in img_file:
+        #     continue
+        # Pocess Query images
         img = cv2.imread(img_file)
 
         # Denoise image
         if args.denoise == True:
             img = remove_noise(img)
 
-        #print(i, img_file)
-        # plt.imshow(img)
-        # plt.show()
-        #img = remove_noise(img)
-        # plt.imshow(img)
-        # plt.show()
+        masks = substractBackground(img)
 
-        # Detect texts
-        # Compute the text box
-        [left, top, right, bottom] = bounding_box(img)
-        mask = np.ones(img.shape[:2], np.uint8)
+        image_distances_e = []
+        image_distances_h = []
+        image_bboxes = []
+        for idx, mask in enumerate(masks):
+            # Detect texts
+            # Compute the text box
+            [left, top, right, bottom] = bounding_box(img, mask=mask)
 
-        # When no BBOX is detected, the bounding box function returns a BBox with the shape of the image
-        # So, when this occurs do not substract the BBox from the mask
-        if (right != img.shape[0] and right != img.shape[1]):
-            mask[top:bottom, left:right] = 0
+            # When no BBOX is detected, the bounding box function returns a BBox with the shape of the image
+            # So, when this occurs do not substract the BBox from the mask
+            if (right != img.shape[0] and right != img.shape[1]):
+                mask[top:bottom, left:right] = 0
 
-        #query_hist = extract_LBP_features(img, p, r, mask=mask, type = type, color=color)
-        query_hist = combinedDescriptors(img, args)
+            query_hist = combinedDescriptors(img, args, mask=mask)
+            image_bboxes.append([left, top, right, bottom])
 
-        # plt.plot(query_hist)
-        # plt.show()
+            # plt.plot(query_hist)
+            # plt.show()
 
-        dist_euclidean_i = []
-        dist_hellinger_i = []
+            # Compute Euclidean and Hellinger distance
+            dist_euclidean_i = []
+            dist_hellinger_i = []
 
-        for bbdd_h in bbdd_hists:
-            if not texture_descriptor=='DCT':
-                dist_euclidean_i.append(euclidean_distance(query_hist, bbdd_h))
-                dist_hellinger_i.append(hellingerDistance(query_hist, bbdd_h))
-            else:
-                # In the case of DCT we compute distances separately
+            # Compute all distances to BBDD
+            for bbdd_h in bbdd_hists:
+                if not texture_descriptor == 'DCT':
+                    dist_euclidean_i.append(euclidean_distance(query_hist, bbdd_h))
+                    dist_hellinger_i.append(hellingerDistance(query_hist, bbdd_h))
+                else:
+                    # In the case of DCT we compute distances separately
 
-                # First the color at [0]
-                color_euclidean = euclidean_distance(query_hist[0], bbdd_h[0])
-                color_hellinger = hellingerDistance(query_hist[0], bbdd_h[0])
+                    # First the color at [0]
+                    color_euclidean = euclidean_distance(query_hist[0], bbdd_h[0])
+                    color_hellinger = hellingerDistance(query_hist[0], bbdd_h[0])
 
-                # Second the texture at [1]
-                texture_similarity = euclidean_distance(query_hist[1], bbdd_h[1])
+                    # Second the texture at [1]
+                    texture_similarity = euclidean_distance(query_hist[1], bbdd_h[1])
 
-                dist_euclidean_i.append(color_euclidean + texture_similarity)
-                dist_hellinger_i.append(color_hellinger + texture_similarity)
+                    dist_euclidean_i.append(color_euclidean + texture_similarity)
+                    dist_hellinger_i.append(color_hellinger + texture_similarity)
 
+            # Sort in ascending distance
+            sort_dist_euclidean = np.argsort(dist_euclidean_i).tolist()
+            sort_dist_hellinger = np.argsort(dist_hellinger_i).tolist()
 
-        sort_dist_euclidean = np.argsort(dist_euclidean_i).tolist()
-        sort_dist_hellinger = np.argsort(dist_hellinger_i).tolist()
+            # Adjust order using text
+            if args.text is not None:
+                text = read_text(img, [left, top, right, bottom])
 
-        if args.text is not None:
-            text = read_text(img, [left, top, right, bottom])
+                sort_dist_euclidean = compareArguments(sort_dist_euclidean, text, text_corresp, text_data)
+                sort_dist_hellinger = compareArguments(sort_dist_hellinger, text, text_corresp, text_data)
+           # print()
 
-            sort_dist_euclidean = compareArguments(sort_dist_euclidean, text, text_corresp, text_data)
-            sort_dist_hellinger = compareArguments(sort_dist_hellinger, text, text_corresp, text_data)
+            image_distances_e.append(sort_dist_euclidean) # Append all distances in a list of lists
+            image_distances_h.append(sort_dist_hellinger)
 
-        dist_euclidean.append(sort_dist_euclidean[:args.k])
-        dist_hellinger.append(sort_dist_hellinger[:args.k])
+        dist_euclidean.append(image_distances_e)
+        dist_hellinger.append(image_distances_h)
 
         # Evalate boundingbox
         # if 'w3' in set_name:
@@ -210,8 +218,8 @@ def main():
     print()
     print(f'mAP@k (k = {args.k}) using p = {str(p)}, r = {str(r)}, method = {type}, Color Space: {color}, Blocks: {str(b)}')
     print()
-    print(f'Euclidean: {mapk(data, dist_euclidean, k=args.k)}')
-    print(f'Hellinger: {mapk(data, dist_hellinger, k=args.k)}')
+    print(f'Euclidean: {mapk2paintings(data, dist_euclidean, k=args.k)}')
+    print(f'Hellinger: {mapk2paintings(data, dist_hellinger, k=args.k)}')
     print()
     print('mean IoU of the Bounding Boxes:')
     print(iou/n_query_images)

@@ -16,7 +16,7 @@ def extract_LBP_features(image, p , r, mask = None, type = 'default', color = 'g
     # plt.imshow(image)
     # plt.subplot(132)
     # plt.imshow(mask)
-    cropped = crop_image(image, mask)
+    cropped, newMask = crop_image(image, mask)
 
     # plt.subplot(133)
     # plt.imshow(cropped)
@@ -39,7 +39,7 @@ def extract_LBP_features(image, p , r, mask = None, type = 'default', color = 'g
     max_val = int(lbp_cv2.max(axis = 0).max(axis=0))
 
     # Compute hist and normalize
-    hist = cv2.calcHist([np.float32(lbp)], [0], None, [p+2], [0, max_val])
+    hist = cv2.calcHist([np.float32(lbp)], [0], newMask, [p+2], [0, max_val])
     hist = cv2.normalize(hist, hist).squeeze()
     return hist
 
@@ -118,7 +118,7 @@ def LBP_blocks(image, block=1, p=8, r=1, type = 'default', color='gray', mask = 
 
 def crop_image(image, mask):
     if mask is None:
-        return image
+        return image, None
 
     result = cv2.bitwise_and(image, image, mask=mask)
     [_, _, stats, _] = cv2.connectedComponentsWithStats(mask, 4, cv2.CV_32S)
@@ -127,13 +127,17 @@ def crop_image(image, mask):
         if it[4] < m:
             smallestCC = it
 
-    # plt.subplot(121)
+    cropped = result[smallestCC[1]: smallestCC[1] + smallestCC[3], smallestCC[0]: smallestCC[0] + smallestCC[2], :]
+    newMask = mask[smallestCC[1]: smallestCC[1] + smallestCC[3], smallestCC[0]: smallestCC[0] + smallestCC[2]]
+
+    # plt.subplot(131)
     # plt.imshow(result)
-    # plt.subplot(122)
-    #
-    # plt.imshow(result[smallestCC[0]:smallestCC[3], smallestCC[1]:smallestCC[2]])
+    # plt.subplot(132)
+    # plt.imshow(cropped)
+    # plt.subplot(133)
+    # plt.imshow(newMask)
     # plt.show()
-    return result[smallestCC[1]: smallestCC[1] + smallestCC[3], smallestCC[0]: smallestCC[0] + smallestCC[2], :]
+    return cropped, newMask
 
 if __name__ == "__main__":
     path_image = 'C:/Users/Joan/Desktop/Master_Computer_Vision_2021/M1/data/qsd1_w2/00000.jpg'

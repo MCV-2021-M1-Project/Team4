@@ -1,6 +1,9 @@
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+from skimage.segmentation import flood_fill
+from skimage.measure import label, regionprops
+from noise_detection_and_removal import remove_noise
 
 TH_S = 114  # Saturation threshold
 TH_V = 63   # Value threshold
@@ -40,163 +43,142 @@ def substractBackground(image):
 # -- AUXILIARY FUNCTIONS TO SUBTRACT BACKGROUND --
 
 def connected_components(mask):
-    # TWO TYPES OF MASK: CLOSING AND GRADIENT
+    # TWO TYPES OF MASK ARE USED: CLOSING AND GRADIENT
+    # THEN, THE UNION OF THE TWO IS DONE
 
     # ----- 1. CLOSING -----
 
-    # Apply closing of 63 x 63 to put the interior of the paintings as mask (value 1)
-    kernel = np.ones((50, 50), np.uint8)
-    closing_mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    # Closing with a very small structuring element to remove random points of the mask
+    kernel = np.ones((10, 10), np.uint8)
+    closing_mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
 
-    # Transform mask to unsigned int8 to compattibility with open cv functions
+    # Closing of 50 x 50 to put the interior of the paintings as mask (value 1)
+    kernel = np.ones((50, 50), np.uint8)
+    closing_mask = cv2.morphologyEx(closing_mask, cv2.MORPH_CLOSE, kernel)
+
+    # Transform mask to unsigned int8 due to compatibility with open cv functions
     closing_mask = np.array(closing_mask, dtype=np.uint8)
 
-    # Find the number of connected components of the mask (num_comp)
-    # The following function returns:
-    # - num_comp:   Number of connected components
-    # - components: The same mask as the input but each component
-    #               has a different value from 0 to num_components ordered from bigger to smaller.
-    # - stats: Statistics of each connected component, including BBox and area in pixels
+    # Find the connected components of the CLOSING MASK
+    # num_comp: number of components detected (CAREFUL!!! THE BACKGROUND COUNTS AS A CONNECTED COMPONENT)
+    # components: same mask as the input but with different values for each connected component
+    # stats: list of statistics of each components such as:
+    #        stats[i][cv2.CC_STAT_TOP]:     top pixel of the component
+    #        stats[i][cv2.CC_STAT_LEFT]:    left pixel of the component
+    #        stats[i][cv2.CC_STAT_WIDTH]:   width of the component
+    #        stats[i][cv2.CC_STAT_HEIGHT]:  height of the component
+    #        stats[i][cv2.CC_STAT_AREA]:    area in pixels of the component
+    # centroids (_): centroids of the component (NOT USED)
     (num_comp, components, stats, _) = cv2.connectedComponentsWithStats(closing_mask)
 
-    image_area = mask.shape[0] * mask.shape[1]  # Area of the image in pixels
-    maxComp = 0  # Counter of the connected components. When maxComp == 2 -> STOP
-    comp = []  # List with the mask of the connected components
+    # Obtain the BBox coordinates of each component
+    props = regionprops(components)
 
-    # Search the two biggest components. If some anomalies occur empty the components list to discard
-    # this mask
-    # The anomalies are:
-    # - If the connected components has the same width or height as the original image
-    # - If the BBox of the connected components is in one of the corners
-    # If there is no anomalies and the percentage of the area of the components is bigger than 0.02
-    # append it to the list
-    # STOP when there are already 2 components in the list
+    # for each component draw the BBox full (value 1)
+    for prop in props:
+        cv2.rectangle(components, (prop.bbox[1], prop.bbox[0]), (prop.bbox[3], prop.bbox[2]), 1, -1)
+
+    closing_mask = components.astype(np.uint8)
+
+    # Find again the connected components of the CLOSING MASK (after changing each components for its full BBox)
+    (num_comp, components, stats, _) = cv2.connectedComponentsWithStats(closing_mask)
+
+    # Remove the component if it has the same width or height as the image
+    joined_gradient = np.zeros(mask.shape[:2], dtype=np.uint8)
     for idx, s in enumerate(stats):
-        if idx != 0 and (s[cv2.CC_STAT_WIDTH] == mask.shape[1] or s[cv2.CC_STAT_HEIGHT] == mask.shape[0]):
-            comp = []
-            break
+        if idx != 0 and (s[cv2.CC_STAT_WIDTH] < mask.shape[1] and s[cv2.CC_STAT_HEIGHT] < mask.shape[0]):
+            joined_gradient[components == idx] = 1
 
-        if idx != 0 and ((s[cv2.CC_STAT_TOP] == 0 and s[cv2.CC_STAT_LEFT] == 0) or ((s[cv2.CC_STAT_TOP] + s[cv2.CC_STAT_WIDTH]) ==  mask.shape[1] and (s[cv2.CC_STAT_LEFT] + s[cv2.CC_STAT_HEIGHT]) == mask.shape[0])):
-            comp = []
-            break
+    closing_mask = joined_gradient
 
-        if (s[cv2.CC_STAT_WIDTH] * s[cv2.CC_STAT_HEIGHT] / image_area) < 1 and (
-                (s[cv2.CC_STAT_AREA] / image_area) > 0.02):
-            comp_i = np.zeros((mask.shape[0], mask.shape[1]))
-            comp_i[components == idx] = 1
-            comp.append(np.array(comp_i, dtype=np.uint8))
-            maxComp = maxComp + 1
+    # ----- 2. MORPHOLOGIC GRADIENT -----
 
-            if maxComp == 2:
-                break
+    # As the image has been denoised, apply a sharpener filter to the mask to enhance and sharpen edges
+    kernel = np.array([[-1, -1, -1],
+                       [-1, 9, -1],
+                       [-1, -1, -1]])
+    mask = cv2.filter2D(src=mask, ddepth=-1, kernel=kernel)
 
-    # Concatenate the 2 biggest components
-    if len(comp) == 0:
-        closing_mask = np.zeros((mask.shape[0], mask.shape[1]))
-    if len(comp) == 1:
-        closing_mask = np.zeros((mask.shape[0], mask.shape[1]))
-        closing_mask[(comp[0]==1)] = 1
-    if len(comp) == 2:
-        closing_mask = np.zeros((mask.shape[0], mask.shape[1]))
-        closing_mask[(comp[0]==1) | (comp[1]==1)] = 1
-
-    # ----- 2. MORPHOLOGIC GRADIENT + CLOSING -----
-
-    # Structuring element
+    # Perform the morphological gradient by doing erosion and dilation separately and then subtract
+    # (with small structuring element)
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-
-    # Perform the morphological gradient aby doing erosion and dilation separately and then subtract
     erosion = cv2.erode(mask, kernel, iterations=1)
     dilation = cv2.dilate(mask, kernel, iterations=1)
     gradient_mask = dilation - erosion
 
-    # Apply closing of 63 x 63 to put the interior of the paintings as mask (value 1)
-    kernel = np.ones((30, 63), np.uint8)
+    # Apply closing of 75 x 75 to propagate the big gradient values (sharp edges)
+    kernel = np.ones((75, 75), np.uint8)
     gradient_mask = cv2.morphologyEx(gradient_mask, cv2.MORPH_CLOSE, kernel)
 
-    # Threshold the mask and change range to [0-1]
+    # Threshold the mask and change the dynamic range to [0, 1]
     (T, gradient_mask) = cv2.threshold(gradient_mask, 0.5, 1, cv2.THRESH_BINARY)
 
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 3))
-    gradient_mask = cv2.erode(gradient_mask, kernel, iterations=1)
-    gradient_mask = cv2.dilate(gradient_mask, kernel, iterations=1)
+    # Transform mask to unsigned int8 due to compatibility with open cv functions
     gradient_mask = np.array(gradient_mask, dtype=np.uint8)
 
-    # Find the number of connected components of the mask (num_comp)
-    # The following function returns:
-    # - num_comp:   Number of connected components
-    # - components: The same mask as the input but each component
-    #               has a different value from 0 to num_components ordered from bigger to smaller.
-    # - stats: Statistics of each connected component, including BBox and area in pixels
+    # Find the connected components of the GRADIENT MASK
+    # num_comp: number of components detected (CAREFUL!!! THE BACKGROUND COUNTS AS A CONNECTED COMPONENT)
+    # components: same mask as the input but with different values for each connected component
+    # stats: list of statistics of each components such as:
+    #        stats[i][cv2.CC_STAT_TOP]:     top pixel of the component
+    #        stats[i][cv2.CC_STAT_LEFT]:    left pixel of the component
+    #        stats[i][cv2.CC_STAT_WIDTH]:   width of the component
+    #        stats[i][cv2.CC_STAT_HEIGHT]:  height of the component
+    #        stats[i][cv2.CC_STAT_AREA]:    area in pixels of the component
+    # centroids (_): centroids of the component (NOT USED)
     (num_comp, components, stats, _) = cv2.connectedComponentsWithStats(gradient_mask)
-    image_area = mask.shape[0] * mask.shape[1]  # Area of the image in pixels
-    maxComp = 0  # Counter of the connected components. When maxComp == 2 -> STOP
-    comp = []  # List with the mask of the connected components
 
-    # Search the two biggest components. If some anomalies occur empty the components list to discard
-    # this mask
-    # The anomalies are:
-    # - If the connected components has the same width or height as the original image
-    # - If the BBox of the connected components is in one of the corners
-    # If there is no anomalies and the percentage of the area of the components is bigger than 0.02
-    # append it to the list
-    # STOP when there are already 2 components in the list
+    # Obtain the BBox coordinates of each component
+    props = regionprops(components)
+    for prop in props:
+        cv2.rectangle(components, (prop.bbox[1], prop.bbox[0]), (prop.bbox[3], prop.bbox[2]), 1, -1)
+
+    gradient_mask = components.astype(np.uint8)
+
+    # Find again the connected components of the GRADIENT MASK (after changing each components for its full BBox)
+    (num_comp, components, stats, _) = cv2.connectedComponentsWithStats(gradient_mask)
+
+    # Remove the component if it has the same width or height as the image
+    joined_gradient = np.zeros(mask.shape[:2], dtype=np.uint8)
     for idx, s in enumerate(stats):
-        if idx != 0 and (s[cv2.CC_STAT_WIDTH] == mask.shape[1] or s[cv2.CC_STAT_HEIGHT] == mask.shape[0]):
-            comp = []
-            break
+        if idx!=0 and (s[cv2.CC_STAT_WIDTH] < mask.shape[1] and s[cv2.CC_STAT_HEIGHT] < mask.shape[0]):
+            joined_gradient[components == idx] = 1
 
-        if idx != 0 and s[cv2.CC_STAT_AREA] / image_area > 0.02 and (s[cv2.CC_STAT_TOP] == 0 or s[cv2.CC_STAT_LEFT] == 0 or (s[cv2.CC_STAT_TOP] + s[cv2.CC_STAT_WIDTH]) == mask.shape[1] or (s[cv2.CC_STAT_LEFT] + s[cv2.CC_STAT_HEIGHT]) == mask.shape[0]):
-            comp = []
-            break
+    gradient_mask = joined_gradient
 
-        if (s[cv2.CC_STAT_WIDTH] * s[cv2.CC_STAT_HEIGHT] / image_area) < 1 and (
-                s[cv2.CC_STAT_AREA] / image_area) > 0.02:
-            comp_i = np.zeros((mask.shape[0], mask.shape[1]))
-            comp_i[components == idx] = 1
-            comp.append(np.array(comp_i, dtype=np.uint8))
-            maxComp = maxComp + 1
+    # ----- 3. UNION OF BOTH MASKS -----
 
-            if maxComp == 2:
-                break
-    # Concatenate the 2 biggest components
-    if len(comp) == 0:
-        gradient_mask = np.zeros((mask.shape[0], mask.shape[1]))
-    if len(comp) == 1:
-        gradient_mask = np.zeros((mask.shape[0], mask.shape[1]))
-        gradient_mask[(comp[0] == 1)] = 1
-    if len(comp) == 2:
-        gradient_mask = np.zeros((mask.shape[0], mask.shape[1]))
-        gradient_mask[(comp[0] == 1) | (comp[1] == 1)] = 1
+    # Make the union of both masks
+    union_mask = np.zeros(mask.shape[:2], dtype=np.uint8)
+    union_mask[(closing_mask == 1)] = 1
+    union_mask[(gradient_mask == 1)] = 1
 
-    # Union of the 2 masks
-    union_mask = np.zeros((mask.shape[0], mask.shape[1]), dtype=np.uint8)
-    union_mask[(closing_mask==1) | (gradient_mask==1)] = 1
-
-    # Separate the masks in a list.
-    # If there are no paintings return one empty mask.
-    # If there is 1 painting return a list with 1 mask
-    # If there is 2 painting return a list with 2 mask
-
+    # Find again the connected components of the UNION MASK
     (num_comp, components, stats, _) = cv2.connectedComponentsWithStats(union_mask)
 
-    separated_masks = []
+    # ----- 4. MASK SEPARATION -----
+    # Separate the connected components into different masks
 
+    comp = []   # List in which all the masks will be appended
+
+    # If the number of the connected components is 1, which means that no painting has been detected. Create a mask of 1
     if num_comp == 1:
-        separated_masks.append(np.ones((mask.shape[0], mask.shape[1]), dtype=np.uint8))
+        comp.append(np.ones(mask.shape[:2], dtype=np.uint8))
 
-    elif num_comp == 2:
-        components_i = np.zeros((mask.shape[0], mask.shape[1]))
-        components_i[components == 1] = 1
-        separated_masks.append(np.array(components_i, dtype=np.uint8))
-
+    # If the number of connected components is more than 2 (background and one painting or more), iterate on the
+    # connected components. Store the component in a new mask if the component is:
+    #   Not the position 0 (as it is the background)
+    #   Same width or length as the original image
+    #   Area of the component is bigger than a threshold
     else:
-        for idx in range(1, 3):
-            components_i = np.zeros((mask.shape[0], mask.shape[1]))
-            components_i[components == idx] = 1
-            separated_masks.append(np.array(components_i, dtype=np.uint8))
+        image_area = mask.shape[0] * mask.shape[1]  # Area of the image in pixels
+        for idx, s in enumerate(stats):
+            if idx!=0 and (s[cv2.CC_STAT_WIDTH] < mask.shape[1] or s[cv2.CC_STAT_HEIGHT] < mask.shape[0]) and (s[cv2.CC_STAT_AREA] / image_area) > 0.05 :
+                comp_i = np.zeros((mask.shape[0], mask.shape[1]))
+                comp_i[components == idx] = 1
+                comp.append(np.array(comp_i, dtype=np.uint8))
 
-    return separated_masks
+    return comp
 
 def find_mask(connected_component):
     # Find Upper and Bottom borders
@@ -306,9 +288,3 @@ def recall(tp, fn):
 
 def f1_measure(p, r):
     return np.nan_to_num(2 * p * r / (p + r))
-
-
-
-
-
-

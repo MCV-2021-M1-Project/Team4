@@ -19,7 +19,15 @@ def colorDescriptors(image, block=1, mask = None, color_space="HSV"):
     # If block greater or equal than 2, compute the first level of block histograms
     elif block >= 2:
         histogram, masks = blockHistogram(image, mask=mask, color_space=color_space)
-
+        # plt.subplot(221)
+        # plt.imshow(masks[0])
+        # plt.subplot(222)
+        # plt.imshow(masks[1])
+        # plt.subplot(223)
+        # plt.imshow(masks[2])
+        # plt.subplot(224)
+        # plt.imshow(masks[3])
+        # plt.show()
         #  If block == 2 return the histograms of level 2
         if block == 2:
             return np.float32(histogram)

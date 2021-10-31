@@ -2,9 +2,12 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 import pickle
-
+from LBP_descriptor import crop_image
 
 def dct_descriptor(img, mask=None):
+
+    img, newMask = crop_image(img, mask)
+
     dst_width = 500
     dst_height = 500
     pts_dst = np.array([[0, 0], [0, dst_width], [dst_height, 0], [dst_height, dst_width]])
