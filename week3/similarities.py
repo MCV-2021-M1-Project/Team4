@@ -4,13 +4,6 @@ import  matplotlib.pyplot as plt
 # FILE WITH ALL THE FUNCTIONS WHICH DEAL WITH COMPUTING THE SIMILARITIES BETWEEN DESCRIPTORS
 
 def hellingerDistance(hist1, hist2):
-    # plt.subplot(121)
-    # plt.plot(hist1)
-    #
-    # plt.subplot(122)
-    # plt.plot(hist2)
-    # plt.show()
-
     return cv2.compareHist(hist1, hist2, cv2.HISTCMP_BHATTACHARYYA)
 
 def euclidean_distance(u,v):
@@ -24,4 +17,3 @@ def chi2_distance(u,v, eps=1e-10):
 
 def histogram_intersection(u,v):
     return np.sum(np.minimum(u,v))
-
