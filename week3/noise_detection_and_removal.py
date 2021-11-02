@@ -54,13 +54,32 @@ def remove_noise(img, type='median', kernel_size=3, plot_results=False, img_gt=0
     return dst
 
 
+if __name__ == "__main__":
+    path_image = 'C:/Users/Joan/Desktop/Master_Computer_Vision_2021/M1/data/qsd1_w3/00000.jpg'
+    path_image_gt = 'C:/Users/Joan/Desktop/Master_Computer_Vision_2021/M1/data/qsd1_w3/non_augmented/00000.jpg'
+
+    p = 8
+    r = 1
+
+    img = cv2.imread(path_image)
+    img_gt = cv2.imread(path_image_gt)
+    plt.subplot(131)
+    plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    plt.subplot(132)
+    plt.imshow(cv2.cvtColor(img_gt, cv2.COLOR_BGR2RGB))
+
+    img_processed = remove_noise(img, type='median', plot_results=True, img_gt=img_gt)
+    plt.subplot(133)
+    plt.imshow(img_processed)
+    plt.show()
+
 
 # This lines are just to test the function
 '''
 t = 5
 for j in range(t):
     img_file = '/Users/Cesc47/Documents/CesC_47/MCV/M1/data/qsd1_w3' + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
-    img_file_gt = '/Users/Cesc47/Documents/CesC_47/MCV/M1/data/qsd1_w3/non_augmented' + '/00' + ('00' if j < 10 else '0') + str(j) + '.jpg'
+    
     img = cv2.imread(img_file)
     img_gt = cv2.imread(img_file_gt)
     img_processed = remove_noise(img, type='median', plot_results=True, img_gt=img_gt)

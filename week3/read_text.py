@@ -1,5 +1,9 @@
 import numpy as np
 import pytesseract
+
+# Only windows
+#pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
+
 import cv2
 import matplotlib.pyplot as plt
 import glob
@@ -117,8 +121,10 @@ def compareArguments(arg_distances, text, text_corresp, text_data):
 
     # Take the text with lowest distance to string
     predicted_text = text_data[arg_text[0]]
-    print(arg_distances)
-    print(text + '->' + predicted_text)
+
+    # print(arg_distances)
+    # print(text + '->' + predicted_text)
+
     # If the distance of the best retrieval divided by the length of the title is less than a threshold, then:
     # Search the first occurring item on the arg_distances (sorted painting numbers after a descriptor has already done
     # the retrieval), remove the item and put it in the first position.
@@ -127,7 +133,8 @@ def compareArguments(arg_distances, text, text_corresp, text_data):
         arg_distances.remove(pred)
         arg_distances.insert(0, pred)
 
-    print(arg_distances)
-    print()
+    # print(arg_distances)
+    # print()
     # Return the modified arg_distances
     return arg_distances
+
