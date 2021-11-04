@@ -1,11 +1,8 @@
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from skimage.segmentation import flood_fill
-from skimage.measure import label, regionprops
-from noise_detection_and_removal import remove_noise
+from skimage.measure import regionprops
 from skimage import feature
-
 
 TH_S = 114  # Saturation threshold
 TH_V = 63   # Value threshold
