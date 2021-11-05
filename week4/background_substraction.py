@@ -1,9 +1,8 @@
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from skimage.segmentation import flood_fill
-from skimage.measure import label, regionprops
-from noise_detection_and_removal import remove_noise
+from skimage.measure import regionprops
+from skimage import feature
 
 TH_S = 114  # Saturation threshold
 TH_V = 63   # Value threshold
@@ -26,25 +25,25 @@ def substractBackground(image):
     h, s, v = cv2.split(hsv_image)
 
     # Threshold the image with the TH_S and TH_V values and create an initial mask
-    thresholded_image = np.zeros((image.shape[0], image.shape[1]))
-    thresholded_image[(s > TH_S) | (v < TH_V)] = 1
+    thresholded_hsv = np.zeros((image.shape[0], image.shape[1]))
+    thresholded_hsv[(s > TH_S) | (v < TH_V)] = 1
 
     # Input: mask
-    # Output: list with masks of the lists. If there
-    components = connected_components(thresholded_image)
+    # Output: list with masks of the lists.
+    components = connected_components(image, thresholded_hsv)
 
     image_masks = []
-    for cc in range(len(components)):
-        image_masks.append(find_mask(components[cc]))
+    for cc in components:
+        image_masks.append(cc)
 
     return image_masks
 
 
 # -- AUXILIARY FUNCTIONS TO SUBTRACT BACKGROUND --
 
-def connected_components(mask):
-    # TWO TYPES OF MASK ARE USED: CLOSING AND GRADIENT
-    # THEN, THE UNION OF THE TWO IS DONE
+def connected_components(image, mask):
+    # THREE TYPES OF MASK ARE USED: CLOSING, GRADIENT AND CANNY
+    # THEN, THE UNION OF THE THREE IS DONE
 
     # ----- 1. CLOSING -----
 
@@ -90,7 +89,6 @@ def connected_components(mask):
             joined_gradient[components == idx] = 1
 
     closing_mask = joined_gradient
-
     # ----- 2. MORPHOLOGIC GRADIENT -----
 
     # As the image has been denoised, apply a sharpener filter to the mask to enhance and sharpen edges
@@ -146,19 +144,59 @@ def connected_components(mask):
 
     gradient_mask = joined_gradient
 
-    # ----- 3. UNION OF BOTH MASKS -----
+    # ----- 3. CANNY -----
+
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    canny_mask = np.uint8(feature.canny(gray, sigma=1))
+    # Closing of 50 x 50 to put the interior of the paintings as mask (value 1)
+    kernel = np.ones((50, 50), np.uint8)
+    canny_mask = cv2.morphologyEx(canny_mask, cv2.MORPH_CLOSE, kernel)
+
+    kernel = np.ones((10, 10), np.uint8)
+    canny_mask = cv2.morphologyEx(canny_mask, cv2.MORPH_OPEN, kernel)
+
+    (num_comp, components, stats, _) = cv2.connectedComponentsWithStats(canny_mask)
+
+    # Obtain the BBox coordinates of each component
+    props = regionprops(components)
+    for prop in props:
+        cv2.rectangle(components, (prop.bbox[1], prop.bbox[0]), (prop.bbox[3], prop.bbox[2]), 1, -1)
+
+    canny_mask = components.astype(np.uint8)
+
+    # Find again the connected components of the GRADIENT MASK (after changing each components for its full BBox)
+    (num_comp, components, stats, _) = cv2.connectedComponentsWithStats(canny_mask)
+
+    # Remove the component if it has the same width or height as the image
+    joined_gradient = np.zeros(mask.shape[:2], dtype=np.uint8)
+    for idx, s in enumerate(stats):
+        if idx != 0:
+            joined_gradient[components == idx] = 1
+
+    canny_mask = joined_gradient
+
+    # ----- 4. UNION OF BOTH MASKS -----
 
     # Make the union of both masks
     union_mask = np.zeros(mask.shape[:2], dtype=np.uint8)
     union_mask[(closing_mask == 1)] = 1
     union_mask[(gradient_mask == 1)] = 1
+    union_mask[(canny_mask == 1)] = 1
 
     # Find again the connected components of the UNION MASK
     (num_comp, components, stats, _) = cv2.connectedComponentsWithStats(union_mask)
 
-    # ----- 4. MASK SEPARATION -----
-    # Separate the connected components into different masks
+    props = regionprops(components)
+    for prop in props:
+        cv2.rectangle(components, (prop.bbox[1], prop.bbox[0]), (prop.bbox[3], prop.bbox[2]), 1, -1)
 
+    union_mask = components.astype(np.uint8)
+
+    (num_comp, components, stats, _) = cv2.connectedComponentsWithStats(union_mask)
+
+    # ----- 5. MASK SEPARATION -----
+
+    # Separate the connected components into different masks
     comp = []   # List in which all the masks will be appended
 
     # If the number of the connected components is 1, which means that no painting has been detected. Create a mask of 1
@@ -177,114 +215,5 @@ def connected_components(mask):
                 comp_i = np.zeros((mask.shape[0], mask.shape[1]))
                 comp_i[components == idx] = 1
                 comp.append(np.array(comp_i, dtype=np.uint8))
-
+                
     return comp
-
-def find_mask(connected_component):
-    # Find Upper and Bottom borders
-    # Takes the first non-zero element's index for each array's column
-    upper_border = first_nonzero(connected_component, axis=0)
-    bottom_border = last_nonzero(connected_component, axis=0)
-
-    # Find picture's edges coordinates
-    if (upper_border > -1).any():
-        ul_j, ul_i, ur_j, ur_i = bounds(upper_border)
-        bl_j, bl_i, br_j, br_i = bounds(bottom_border)
-
-        pointUL = [ul_i, ul_j]  # Upper left point
-        pointUR = [ur_i, ur_j]  # Upper right point
-        pointBL = [bl_i, bl_j]  # Bottom left point
-        pointBR = [br_i, br_j]  # Bottom right point
-
-        # Get the mask and convert it to unit8 to not have problems in cv2.CalcHist function later
-        mask = cv2.fillConvexPoly(np.zeros((connected_component.shape[0], connected_component.shape[1])),
-                                  np.array([pointUL, pointUR, pointBR, pointBL]), color=1)
-
-        return mask.astype(np.uint8)
-
-    else:
-        mask = np.zeros((connected_component.shape[0], connected_component.shape[1]), dtype="uint8")
-
-        return mask
-
-def first_nonzero(arr, axis):
-    first_n0 = np.where(arr.any(axis=axis), arr.argmax(axis=axis), -1)
-
-    if axis == 0:
-        a = arr[first_n0, np.arange(arr.shape[1])]
-
-    elif axis == 1:
-        a = arr[np.arange(arr.shape[0]), first_n0]
-
-    first_n0[a == 0] = -1
-
-    return first_n0
-
-def last_nonzero(arr, axis):
-    flipped_first_nonzero = first_nonzero(np.flip(arr), axis)
-    last_n0 = np.flip(flipped_first_nonzero)
-    last_n0[last_n0 != -1] = arr.shape[axis] - last_n0[last_n0 != -1]
-
-    return last_n0
-
-def bounds(u):
-    i = inliers(u)
-    edges = np.argwhere(i != -1)  # Just inliers indexes
-
-    left_i = edges.min()
-    left_j = u[left_i]
-
-    right_i = edges.max()
-    right_j = u[right_i]
-
-    coordinates = [left_j, left_i, right_j, right_i]
-
-    return coordinates
-
-def inliers(u):
-    # Detected border's must be close to each other
-    upper_bound, bottom_bound = inliers_bounds(np.extract(u != -1, u))
-
-    # Inliers
-    inliers = u
-    inliers[u > upper_bound] = -1
-    inliers[u < bottom_bound] = -1
-
-    return inliers
-
-def inliers_bounds(u):
-    q1 = np.quantile(u, 0.25)  # First quantile
-    q3 = np.quantile(u, 0.75)  # Second quantile
-    q_inter = q3 - q1  # Interquantile interval
-
-    # Inliers bounds
-    upper_bound = q3 + 1.5 * q_inter
-    bottom_bound = q1 - 1.5 * q_inter
-
-    return upper_bound, bottom_bound
-
-# -- AUXILIARY FUNCTIONS EVALUATE THE BACKGROUND SUBTRACTION--
-
-def evaluation(predicted, truth):
-    tp = np.zeros(predicted.shape)
-    fp = np.zeros(predicted.shape)
-    fn = np.zeros(predicted.shape)
-
-    tp[(predicted[:, :] == 1) & (truth[:, :] == 1)] = 1
-    fp[(predicted[:, :] == 1) & (truth[:, :] == 0)] = 1
-    fn[(predicted[:, :] == 0) & (truth[:, :] == 1)] = 1
-
-    p = precision(tp, fp)
-    r = recall(tp, fn)
-    f1 = f1_measure(p, r)
-
-    return p, r, f1
-
-def precision(tp, fp):
-    return np.nan_to_num(np.sum(tp) / (np.sum(tp) + np.sum(fp)))
-
-def recall(tp, fn):
-    return np.nan_to_num(np.sum(tp) / (np.sum(tp) + np.sum(fn)))
-
-def f1_measure(p, r):
-    return np.nan_to_num(2 * p * r / (p + r))
