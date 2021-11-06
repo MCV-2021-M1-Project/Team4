@@ -1,71 +1,69 @@
 import cv2
+import pickle
 import numpy as np
 import matplotlib.pyplot as plt
-from noise_detection_and_removal import remove_noise
+from tqdm import tqdm
+import ast
+import textdistance as td
+
 from text_box import bounding_box
+from evaluation import bbox_iou, mapk2paintings
+from noise_detection_and_removal import remove_noise
+from background_substraction import substractBackground
+from read_text import read_text
 
 # ----- WHEN THE BBDD IMAGE AND THE QUERY IMAGE ARE THE SAME -----
+n_query_images = 30
+with open("../../data/qsd1_w4/text_boxes.pkl", 'rb') as f:
+        boxes = pickle.load(f)
 
-img1 = cv2.imread('/home/david/Desktop/M1/data/qsd1_w3/00000.jpg')
-img1 = remove_noise(img1)
-[left, top, right, bottom] = bounding_box(img1)
-mask1 = np.ones(img1.shape[:2],dtype=np.uint8)
-mask1[top:bottom, left:right] = 0
+iou = np.array([])
+text_distance = np.array([])
+for i in tqdm(range(n_query_images)): # range(n_query_images)
+    img_file = '../../data/qsd1_w4' + '/00' + ('00' if i < 10 else '0') + str(i) + '.jpg'
+    img_txt = '../../data/qsd1_w4' + '/00' + ('00' if i < 10 else '0') + str(i) + '.txt'
+    
+    with open(img_txt,"r") as f:
+        data = f.readlines()
+        
+        text = []
+        for d in data:
+            text.append(ast.literal_eval(d)[0])
+    
+    img = cv2.imread(img_file)
 
-img2 = cv2.imread('/home/david/Desktop/M1/data/BBDD/bbdd_00092.jpg')
+    img = remove_noise(img)
 
-gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+    # Obtain the backgorund masks of the image. masks is a list of masks. If there is only a painting in the image
+    # the length will be 1, 2 paintings 2, and 3 paintings 3.
+    masks = substractBackground(img)
 
-sift = cv2.SIFT_create()
-
-keypoints_1, descriptors_1 = sift.detectAndCompute(img1, mask1)
-keypoints_2, descriptors_2 = sift.detectAndCompute(img2, None)
-
-print(f"Number of keypoints bbdd: {len(keypoints_2)}")
-print(f"Number of keypoints qsd1: {len(keypoints_1)}")
-
-bf = cv2.BFMatcher(cv2.NORM_L1, crossCheck=True)
-
-matches = bf.match(descriptors_1, descriptors_2)
-matches = sorted(matches, key = lambda x:x.distance)
-
-print(f"matches: {len(matches)}")
-
-img3 = cv2.drawMatches(img1, keypoints_1, img2, keypoints_2, matches[:50], img2, flags=2)
-
-plt.imshow(img3)
-plt.show()
-
-# ----- WHEN THE BBDD IMAGE AND THE QUERY IMAGE ARE DIFFERENT -----
-
-img1 = cv2.imread('/home/david/Desktop/M1/data/qsd1_w3/00000.jpg')
-img1 = remove_noise(img1)
-[left, top, right, bottom] = bounding_box(img1)
-mask1 = np.ones(img1.shape[:2],dtype=np.uint8)
-mask1[top:bottom, left:right] = 0
-
-img2 = cv2.imread('/home/david/Desktop/M1/data/BBDD/bbdd_00094.jpg')
-
-gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
-
-sift = cv2.SIFT_create()
-
-keypoints_1, descriptors_1 = sift.detectAndCompute(img1, mask1)
-keypoints_2, descriptors_2 = sift.detectAndCompute(img2, None)
-
-print(f"Number of keypoints bbdd: {len(keypoints_2)}")
-print(f"Number of keypoints qsd1: {len(keypoints_1)}")
-
-bf = cv2.BFMatcher(cv2.NORM_L1, crossCheck=True)
-
-matches = bf.match(descriptors_1, descriptors_2)
-matches = sorted(matches, key = lambda x:x.distance)
-
-print(f"matches: {len(matches)}")
-
-img3 = cv2.drawMatches(img1, keypoints_1, img2, keypoints_2, matches[:50], img2, flags=2)
-
-plt.imshow(img3)
-plt.show()
+    image_distances = []
+    image_bboxes = []
+    print(img_file)
+    for idx, mask in enumerate(masks):
+        # Compute the text box
+        """ plt.subplot(231)
+        plt.imshow(img) """
+        bbox = bounding_box(img, mask=mask)
+        """ bbox_mask = np.zeros((img.shape[0], img.shape[1]))
+        bbox_mask[mask == 1] = 1
+        
+        img_gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        bbox_mask[top:bottom, left:right] = img_gray[top:bottom, left:right]/255.
+        plt.subplot(236)
+        plt.imshow(bbox_mask)
+        plt.show() """
+        
+        iou = np.append(iou,bbox_iou(bbox, boxes[i][idx]))
+        
+        extractedText = read_text(img, bbox)
+        print('mask: ' + str(idx))
+        print(text[idx])
+        print(extractedText)
+        
+        text_distance = np.append(text_distance,td.levenshtein.distance(extractedText,text[idx]))
+        
+        
+print(np.mean(iou))
+print(np.mean(text_distance))

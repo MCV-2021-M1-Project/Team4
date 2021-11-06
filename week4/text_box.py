@@ -65,7 +65,7 @@ def bounding_box(img, mask=None):
     blackhat = blackhat / np.max(blackhat)  # Normalize
     expanded_mask = np.zeros(
         (height + 60, width + 22))  # We create an expanded mask to avoid problems in edges with morphological filters
-    expanded_mask[30:-30, 11:-11] = blackhat > 0.5  # Thresholding
+    expanded_mask[30:-30, 11:-11] = blackhat > 0.35  # Thresholding
 
     ## STEP 2. Morphological filters
     expanded_mask = expanded_mask.astype(np.uint8)
@@ -75,6 +75,9 @@ def bounding_box(img, mask=None):
     expanded_mask = cv2.morphologyEx(expanded_mask, cv2.MORPH_CLOSE, np.ones((6, 33)))  # Join letters
     expanded_mask = cv2.morphologyEx(expanded_mask, cv2.MORPH_OPEN, np.ones((4, 2)))  # Delete remaining vertical lines
     text_mask = expanded_mask[30:-30, 11:-11]  # We reduce the previously expanded mask
+    
+    """ plt.subplot(232)
+    plt.imshow(text_mask) """
 
     ## STEP 3. Find the biggest connected component's coordinates
     bbox = biggest_component(text_mask)
@@ -98,7 +101,7 @@ def bounding_box(img, mask=None):
     ## STEP 1. Blackhat and thresholding
     expanded_mask = np.zeros(
         (height, width + 200))  # We create an expanded mask to avoid problems in edges with morphological filters
-    expanded_mask = blackhat_box > 0.4
+    expanded_mask = blackhat_box > 0.3
 
     ## STEP 2. Morphological filters
     expanded_mask = expanded_mask.astype(np.uint8)
@@ -108,6 +111,9 @@ def bounding_box(img, mask=None):
     expanded_mask = cv2.morphologyEx(expanded_mask, cv2.MORPH_CLOSE, np.ones((1, 91)))  # Join letters
     expanded_mask = cv2.morphologyEx(expanded_mask, cv2.MORPH_OPEN, np.ones((1, 2)))  # Delete remaining vertical lines
     text_mask = expanded_mask[:, 100:-100]  # Reduce the previously expanded mask
+    
+    """ plt.subplot(233)
+    plt.imshow(text_mask) """
 
     ## STEP 3. Find the biggest connected component's coordinates
     bbox = biggest_component(text_mask)
@@ -144,7 +150,7 @@ def bounding_box(img, mask=None):
     ### 3. ITERATION ###
     ## STEP 1. Blackhat and thresholding
     expanded_mask = expanded_mask / np.amax(expanded_mask)
-    expanded_mask = expanded_mask > 0.57
+    expanded_mask = expanded_mask > 0.3
 
     ## STEP 2. Morphological filters
     expanded_mask = expanded_mask.astype(np.uint8)
@@ -152,6 +158,9 @@ def bounding_box(img, mask=None):
     expanded_mask = cv2.morphologyEx(expanded_mask, cv2.MORPH_OPEN, np.ones((3, 4)))
     expanded_mask = cv2.morphologyEx(expanded_mask, cv2.MORPH_CLOSE, np.ones((3, 87)))
     text_mask = expanded_mask[:, 100:-100]
+    
+    """ plt.subplot(234)
+    plt.imshow(text_mask) """
 
     ## STEP 3. Find the biggest connected components coordinates
     bbox = biggest_component(text_mask)
