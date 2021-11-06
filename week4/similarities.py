@@ -23,18 +23,32 @@ def histogram_intersection(u,v):
     return np.sum(np.minimum(u,v))
 
 
-def feature_distance(descriptors_query, descriptors_bbdd):
-    total_distance = 0
-    matches_ok = []
-    threshold = 3000  # Threshold of L1 distance
+def feature_distance(descriptors_query, descriptors_bbdd, type='sift'):
+    if type == 'sift':
+        total_distance = 0
+        matches_ok = []
+        threshold = 3000  # Threshold of L1 distance
 
-    bf = cv2.BFMatcher(cv2.NORM_L1, crossCheck=True)
-    # Compute matches, discard some of them (with high distances)
-    matches = bf.match(descriptors_query, descriptors_bbdd)
-    for match in matches:
-        if match.distance < threshold:
-            total_distance += match.distance
-            matches_ok.append(match)
-    total_distance /= len(matches)
+        bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
+        # Compute matches, discard some of them (with high distances)
+        matches = bf.match(descriptors_query, descriptors_bbdd)
+        for match in matches:
+            if match.distance < threshold:
+                total_distance += match.distance
+                matches_ok.append(match)
+        total_distance /= len(matches)
 
-    return total_distance
+        return total_distance
+
+    elif type == 'sift_method2' or type == 'orb':
+        bf = cv2.BFMatcher()
+        matches = bf.knnMatch(descriptors_query, descriptors_bbdd, k=2)
+        good = []
+        for m, n in matches:
+            if m.distance < 0.75 * n.distance:
+                good.append([m])
+        if len(good) == 0:
+            return 100000
+        else:
+            return 1 / len(good)
+
