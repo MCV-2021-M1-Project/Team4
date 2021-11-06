@@ -3,7 +3,7 @@ import cv2
 
 def feature_descriptor(img, type='sift', mask=None):
     if type == 'sift':
-        sift = cv2.SIFT_create(800)
+        sift = cv2.SIFT_create(2000)
         keypoints, descriptors = sift.detectAndCompute(img, mask)
 
     # Este va peor pero es mas rapido

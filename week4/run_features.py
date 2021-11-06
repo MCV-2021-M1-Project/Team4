@@ -61,7 +61,7 @@ def main():
     n_bbdd_images = len(glob.glob1(args.p, "*.jpg"))
 
     # -- 3. COMPUTE/LOAD THE HISTOGRAMS OF THE DATABASE
-    """
+
     bbdd_hists = []
     print("BBDD:")
     for i in tqdm(range(n_bbdd_images)): # range(n_bbdd_images)
@@ -72,10 +72,10 @@ def main():
 
     with open('bbdd_features.pkl', 'wb') as f:
         pickle.dump(bbdd_hists, f)
-    """
+    """    
     with open('bbdd_features.pkl', 'rb') as f:
         bbdd_hists = pickle.load(f)
-
+    """
     # -- 4. ITERATE ON THE QUERY IMAGES
     #       4.1. Obtain the image from the query directory
     #       4.2. Denoise the image
@@ -137,7 +137,7 @@ def main():
             image_distances.append(arg_distances[:args.k])
 
             # Add a - 1 if the image is not in the bg:
-            image_distances[idx] = check_painting_db(distances_i, image_distances[idx], th=0.24) #sift 0.03, orb 0.24
+            image_distances[idx] = check_painting_db(distances_i, image_distances[idx], th=0.03) #sift 0.03, orb 0.24
 
 
         distances.append(image_distances)

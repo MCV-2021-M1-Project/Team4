@@ -23,7 +23,8 @@ def histogram_intersection(u,v):
     return np.sum(np.minimum(u,v))
 
 
-def feature_distance(descriptors_query, descriptors_bbdd, type='sift'):
+def feature_distance(descriptors_query, descriptors_bbdd, type='sift_method2'):
+    """
     if type == 'sift':
         total_distance = 0
         matches_ok = []
@@ -39,9 +40,13 @@ def feature_distance(descriptors_query, descriptors_bbdd, type='sift'):
         total_distance /= len(matches)
 
         return total_distance
+    """
+    if type == 'sift_method2' or type == 'orb':
+        if type == 'orb':
+            bf = cv2.BFMatcher(cv2.NORM_HAMMING)
+        if type == 'sift_method2':
+            bf = cv2.BFMatcher()
 
-    elif type == 'sift_method2' or type == 'orb':
-        bf = cv2.BFMatcher(cv2.NORM_HAMMING)
         matches = bf.knnMatch(descriptors_query, descriptors_bbdd, k=2)
         good = []
         for m, n in matches:
