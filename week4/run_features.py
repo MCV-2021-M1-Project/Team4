@@ -108,17 +108,16 @@ def main():
             # Compute the text box
             [left, top, right, bottom] = bounding_box(img, mask=mask)
 
-            """
-            img_to_show = cv2.hconcat([cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), mask*255])
-            cv2.imshow('image' + str(i) + '_' + str(idx), img_to_show)
-            cv2.waitKey(5000)
-            """
-
             # When no BBOX is detected, the bounding box function returns a BBox with the shape of the image
             # So, when this occurs do not substract the BBox from the mask
-            if right != img.shape[0] and right != img.shape[1]:
+            if bottom != img.shape[0] and right != img.shape[1]:
                 mask[top:bottom, left:right] = 0
-
+            """
+            f,ax = plt.subplots(1, 2)
+            ax[0].imshow(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
+            ax[1].imshow(mask)
+            plt.show()
+            """
             query_hist = feature_descriptor(img, mask=mask, type=args.f)
 
             image_bboxes.append([left, top, right, bottom])
@@ -145,7 +144,6 @@ def main():
         bboxes.append(image_bboxes)
 
     # -- 5. DISPLAY THE MAP@K --
-    print('serra matao')
     print()
     print(f'mAP@k (k = {args.k}):')
     print(mapk2paintings(data, distances, k=args.k))
