@@ -61,7 +61,7 @@ def main():
     n_bbdd_images = len(glob.glob1(args.p, "*.jpg"))
 
     # -- 3. COMPUTE/LOAD THE HISTOGRAMS OF THE DATABASE
-
+    """
     bbdd_hists = []
     print("BBDD:")
     for i in tqdm(range(n_bbdd_images)): # range(n_bbdd_images)
@@ -75,7 +75,7 @@ def main():
     """
     with open('bbdd_features.pkl', 'rb') as f:
         bbdd_hists = pickle.load(f)
-    """
+
     # -- 4. ITERATE ON THE QUERY IMAGES
     #       4.1. Obtain the image from the query directory
     #       4.2. Denoise the image
@@ -145,10 +145,13 @@ def main():
         bboxes.append(image_bboxes)
 
     # -- 5. DISPLAY THE MAP@K --
-    print('a')
+    print('serra matao')
     print()
     print(f'mAP@k (k = {args.k}):')
     print(mapk2paintings(data, distances, k=args.k))
+    print()
+    print('mIoU of the Bounding Boxes:')
+    print(iou/(sum([len(b) for b in bboxes])))
 
 if __name__ == "__main__":
     main()

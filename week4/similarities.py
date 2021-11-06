@@ -41,7 +41,7 @@ def feature_distance(descriptors_query, descriptors_bbdd, type='sift'):
         return total_distance
 
     elif type == 'sift_method2' or type == 'orb':
-        bf = cv2.BFMatcher()
+        bf = cv2.BFMatcher(cv2.NORM_HAMMING)
         matches = bf.knnMatch(descriptors_query, descriptors_bbdd, k=2)
         good = []
         for m, n in matches:
