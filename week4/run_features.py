@@ -131,16 +131,19 @@ def main():
 
             iou = iou + bbox_iou([left, top, right, bottom], boxes[i][idx])
 
-            # text = read_text(img, [left, top, right, bottom])
-            # arg_distances = compareArguments(arg_distances, text, text_corresp, text_data)
+            text = read_text(img, [left, top, right, bottom])
 
             arg_distances = np.argsort(distances_i).tolist()
+            arg_distances = compareArguments(arg_distances, text, text_corresp, text_data)
             image_distances.append(arg_distances[:args.k])
+
             # Add a - 1 if the image is not in the bg:
-            image_distances[idx] = check_painting_db(distances_i, image_distances[idx], th=0.03)
+            image_distances[idx] = check_painting_db(distances_i, image_distances[idx], th=0.24) #sift 0.03, orb 0.24
+
 
         distances.append(image_distances)
         bboxes.append(image_bboxes)
+
     # -- 5. DISPLAY THE MAP@K --
     print('a')
     print()

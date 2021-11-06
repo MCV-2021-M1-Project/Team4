@@ -1,5 +1,4 @@
 import cv2
-import numpy as np
 
 
 def feature_descriptor(img, type='sift', mask=None):
@@ -21,7 +20,6 @@ def check_painting_db(distances_i, image_distances, th=0.03):
     for bbdd_number in image_distances:
         if distances_i[bbdd_number] > th:
             image_distances.insert(i, -1)         # -1 means that there is no painting
-            #image_distances = image_distances[:-1] # Drop last number
             del image_distances[-1]                 # Drop last number
             return image_distances
         i += 1
