@@ -189,7 +189,25 @@ def bounding_box(img, mask=None):
     left = left - correction_w if left - correction_w > 0 else 0
     right = right + correction_w if right + correction_w < width else width
 
+
     coordinates = [left, top, right, bottom]  # Bounding box's coordinates
+    """
+    l = int(left+((left-right)/8))
+    t = int(top+((top-bottom)/3))
+    r = int(right-((left-right)/8))
+    b = int(bottom-((top-bottom)/3))
+    if l < 0:
+        l = 0
+    if t < 0:
+        t = 0
+    if r > width:
+        r = width - 1
+    if  b > height:
+        b = height - 1
+
+
+    coordinates = [l, t, r, b]
+    """
     return coordinates
 
 

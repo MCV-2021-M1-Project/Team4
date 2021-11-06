@@ -1,10 +1,9 @@
 import cv2
-import numpy as np
 
 
 def feature_descriptor(img, type='sift', mask=None):
     if type == 'sift':
-        sift = cv2.SIFT_create(800)
+        sift = cv2.SIFT_create(2000)
         keypoints, descriptors = sift.detectAndCompute(img, mask)
 
     # Este va peor pero es mas rapido
@@ -21,7 +20,6 @@ def check_painting_db(distances_i, image_distances, th=0.03):
     for bbdd_number in image_distances:
         if distances_i[bbdd_number] > th:
             image_distances.insert(i, -1)         # -1 means that there is no painting
-            #image_distances = image_distances[:-1] # Drop last number
             del image_distances[-1]                 # Drop last number
             return image_distances
         i += 1
