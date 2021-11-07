@@ -89,6 +89,7 @@ def connected_components(image, mask):
             joined_gradient[components == idx] = 1
 
     closing_mask = joined_gradient
+
     # ----- 2. MORPHOLOGIC GRADIENT -----
 
     # As the image has been denoised, apply a sharpener filter to the mask to enhance and sharpen edges
@@ -148,10 +149,10 @@ def connected_components(image, mask):
 
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     canny_mask = np.uint8(feature.canny(gray, sigma=1))
+
     # Closing of 50 x 50 to put the interior of the paintings as mask (value 1)
     kernel = np.ones((50, 50), np.uint8)
     canny_mask = cv2.morphologyEx(canny_mask, cv2.MORPH_CLOSE, kernel)
-
     kernel = np.ones((10, 10), np.uint8)
     canny_mask = cv2.morphologyEx(canny_mask, cv2.MORPH_OPEN, kernel)
 
@@ -168,12 +169,12 @@ def connected_components(image, mask):
     (num_comp, components, stats, _) = cv2.connectedComponentsWithStats(canny_mask)
 
     # Remove the component if it has the same width or height as the image
-    joined_gradient = np.zeros(mask.shape[:2], dtype=np.uint8)
+    joined_canny = np.zeros(mask.shape[:2], dtype=np.uint8)
     for idx, s in enumerate(stats):
         if idx != 0:
-            joined_gradient[components == idx] = 1
+            joined_canny[components == idx] = 1
 
-    canny_mask = joined_gradient
+    canny_mask = joined_canny
 
     # ----- 4. UNION OF BOTH MASKS -----
 
@@ -192,16 +193,15 @@ def connected_components(image, mask):
 
     union_mask = components.astype(np.uint8)
 
-    (num_comp, components, stats, _) = cv2.connectedComponentsWithStats(union_mask)
-
     # ----- 5. MASK SEPARATION -----
 
+    (num_comp, components, stats, _) = cv2.connectedComponentsWithStats(union_mask)
+
     # Separate the connected components into different masks
-    comp = []   # List in which all the masks will be appended
 
     # If the number of the connected components is 1, which means that no painting has been detected. Create a mask of 1
     if num_comp == 1:
-        comp.append(np.ones(mask.shape[:2], dtype=np.uint8))
+        union_mask = np.ones(mask.shape[:2], dtype=np.uint8)
 
     # If the number of connected components is more than 2 (background and one painting or more), iterate on the
     # connected components. Store the component in a new mask if the component is:
@@ -210,10 +210,27 @@ def connected_components(image, mask):
     #   Area of the component is bigger than a threshold
     else:
         image_area = mask.shape[0] * mask.shape[1]  # Area of the image in pixels
+        union_mask = np.zeros(mask.shape[:2], dtype=np.uint8)
         for idx, s in enumerate(stats):
-            if idx!=0 and (s[cv2.CC_STAT_WIDTH] < mask.shape[1] or s[cv2.CC_STAT_HEIGHT] < mask.shape[0]) and (s[cv2.CC_STAT_AREA] / image_area) > 0.05 :
-                comp_i = np.zeros((mask.shape[0], mask.shape[1]))
-                comp_i[components == idx] = 1
-                comp.append(np.array(comp_i, dtype=np.uint8))
-                
+            if idx!=0 and (s[cv2.CC_STAT_WIDTH] < mask.shape[1] or s[cv2.CC_STAT_HEIGHT] < mask.shape[0]) and (s[cv2.CC_STAT_AREA] / image_area) > 0.05:
+                union_mask[components == idx] = 1
+
+    (num_comp, components, stats, _) = cv2.connectedComponentsWithStats(union_mask)
+
+    lefts = []
+    for idx, s in enumerate(stats):
+        if idx!= 0:
+            lefts.append(s[cv2.CC_STAT_LEFT])
+
+    order = np.argsort(np.array(lefts)).tolist()
+
+    comp = []   # List in which all the masks will be appended
+    if num_comp == 1:
+        comp.append(np.ones(mask.shape[:2], dtype=np.uint8))
+
+    else:
+        for pos in order:
+            comp_i = np.zeros((mask.shape[0], mask.shape[1]))
+            comp_i[components == pos+1] = 1
+            comp.append(np.array(comp_i, dtype=np.uint8))
     return comp
