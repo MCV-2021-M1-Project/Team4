@@ -75,7 +75,7 @@ def bounding_box(img, mask=None):
     expanded_mask = cv2.morphologyEx(expanded_mask, cv2.MORPH_CLOSE, np.ones((6, 33)))  # Join letters
     expanded_mask = cv2.morphologyEx(expanded_mask, cv2.MORPH_OPEN, np.ones((4, 2)))  # Delete remaining vertical lines
     text_mask = expanded_mask[30:-30, 11:-11]  # We reduce the previously expanded mask
-    
+
     """ plt.subplot(232)
     plt.imshow(text_mask) """
 
@@ -111,7 +111,7 @@ def bounding_box(img, mask=None):
     expanded_mask = cv2.morphologyEx(expanded_mask, cv2.MORPH_CLOSE, np.ones((1, 91)))  # Join letters
     expanded_mask = cv2.morphologyEx(expanded_mask, cv2.MORPH_OPEN, np.ones((1, 2)))  # Delete remaining vertical lines
     text_mask = expanded_mask[:, 100:-100]  # Reduce the previously expanded mask
-    
+
     """ plt.subplot(233)
     plt.imshow(text_mask) """
 
@@ -139,7 +139,7 @@ def bounding_box(img, mask=None):
     distance_to_text_left = left - central_left  # Left distance from bounding box to mask
     distance_to_text_right = central_right - right  # Right distance from bounding box to mask
     mean_distance = int((
-                                    distance_to_text_left + distance_to_text_right) / 2)  # Mean left and right distance from bounding box to the mask
+                                distance_to_text_left + distance_to_text_right) / 2)  # Mean left and right distance from bounding box to the mask
 
     right = central_right - mean_distance  # Correction in right border
     left = central_left + mean_distance  # Correction in left border
@@ -158,7 +158,7 @@ def bounding_box(img, mask=None):
     expanded_mask = cv2.morphologyEx(expanded_mask, cv2.MORPH_OPEN, np.ones((3, 4)))
     expanded_mask = cv2.morphologyEx(expanded_mask, cv2.MORPH_CLOSE, np.ones((3, 87)))
     text_mask = expanded_mask[:, 100:-100]
-    
+
     """ plt.subplot(234)
     plt.imshow(text_mask) """
 
@@ -189,25 +189,7 @@ def bounding_box(img, mask=None):
     left = left - correction_w if left - correction_w > 0 else 0
     right = right + correction_w if right + correction_w < width else width
 
-
     coordinates = [left, top, right, bottom]  # Bounding box's coordinates
-    """
-    l = int(left+((left-right)/8))
-    t = int(top+((top-bottom)/3))
-    r = int(right-((left-right)/8))
-    b = int(bottom-((top-bottom)/3))
-    if l < 0:
-        l = 0
-    if t < 0:
-        t = 0
-    if r > width:
-        r = width - 1
-    if  b > height:
-        b = height - 1
-
-
-    coordinates = [l, t, r, b]
-    """
     return coordinates
 
 

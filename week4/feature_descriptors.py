@@ -1,15 +1,17 @@
 import cv2
-
+import matplotlib.pyplot as plt
 
 def feature_descriptor(img, type='sift', mask=None):
     if type == 'sift':
-        sift = cv2.SIFT_create(2000)
+        sift = cv2.SIFT_create(800)
         keypoints, descriptors = sift.detectAndCompute(img, mask)
 
     # Este va peor pero es mas rapido
     elif type == 'orb':
         orb = cv2.ORB_create()
         keypoints, descriptors = orb.detectAndCompute(img, mask)
+        #plt.imshow(cv2.drawKeypoints(img, keypoints, img, color=(255, 0, 0)))
+        #plt.show()
 
     return descriptors
 
@@ -24,8 +26,3 @@ def check_painting_db(distances_i, image_distances, th=0.03):
             return image_distances
         i += 1
     return image_distances
-
-
-
-
-

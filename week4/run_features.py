@@ -62,6 +62,7 @@ def main():
 
     # -- 3. COMPUTE/LOAD THE HISTOGRAMS OF THE DATABASE
 
+    """
     bbdd_hists = []
     print("BBDD:")
     for i in tqdm(range(n_bbdd_images)): # range(n_bbdd_images)
@@ -69,13 +70,12 @@ def main():
         img = cv2.imread(img_file)
         # Append all the query images histograms
         bbdd_hists.append(feature_descriptor(img, mask=None, type=args.f))
-
     with open('bbdd_features.pkl', 'wb') as f:
         pickle.dump(bbdd_hists, f)
-    """    
-    with open('bbdd_features.pkl', 'rb') as f:
-        bbdd_hists = pickle.load(f)
     """
+    with open('orbfeatures.pkl', 'rb') as f:
+        bbdd_hists = pickle.load(f)
+
     # -- 4. ITERATE ON THE QUERY IMAGES
     #       4.1. Obtain the image from the query directory
     #       4.2. Denoise the image
@@ -91,7 +91,6 @@ def main():
     distances = []  # List of distances
     bboxes = []     # List of bboxes
     iou = 0         # IoU sum
-    print("Querys y comparaciones:")
     for i in tqdm(range(n_query_images)): # range(n_query_images)
         img_file = args.q.as_posix() + '/00' + ('00' if i < 10 else '0') + str(i) + '.jpg'
         img = cv2.imread(img_file)
@@ -133,11 +132,11 @@ def main():
             text = read_text(img, [left, top, right, bottom])
 
             arg_distances = np.argsort(distances_i).tolist()
-            arg_distances = compareArguments(arg_distances, text, text_corresp, text_data)
-            image_distances.append(arg_distances[:args.k])
+            #arg_distances, predictedText = compareArguments(arg_distances, text, text_corresp, text_data)
+            image_distances.append(arg_distances)
 
             # Add a - 1 if the image is not in the bg:
-            image_distances[idx] = check_painting_db(distances_i, image_distances[idx], th=0.03) #sift 0.03, orb 0.24
+            image_distances[idx] = check_painting_db(distances_i, image_distances[idx], th=0.24) #sift 0.03, orb 0.24
 
 
         distances.append(image_distances)
@@ -145,8 +144,11 @@ def main():
 
     # -- 5. DISPLAY THE MAP@K --
     print()
-    print(f'mAP@k (k = {args.k}):')
-    print(mapk2paintings(data, distances, k=args.k))
+    print(f'mAP@k (k = {1}):')
+    print(mapk2paintings(data, distances, k=1))
+    print()
+    print(f'mAP@k (k = {5}):')
+    print(mapk2paintings(data, distances, k=5))
     print()
     print('mIoU of the Bounding Boxes:')
     print(iou/(sum([len(b) for b in bboxes])))
