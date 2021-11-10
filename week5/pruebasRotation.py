@@ -50,6 +50,6 @@ for i in range(30):
         median_angle = -median_angle
 
     # Calcular background con plot==TRUE para ver como funciona cada mascara(OPENING, GRADIENT Y CANNY)
-    masks = substractBackground(img_rotated, plot=False)
+    masks = substractBackground(img_rotated, plot=True)
 
     print(f"\t{i:02d}      |\t    {data[i][0][0]:.04f}\t        |\t   {median_angle:.04f} : ")
